@@ -409,7 +409,7 @@ local function post_install_setup()
               menu = {
                   auto_show = true,
                   draw = {
-                      columns = { { "kind_icon" }, { "label", "label_description", gap = 1 } },
+                      columns = { { "label", "label_description", gap = 1 } },
                   },
               },
               -- Mostrar sugestões mais rápido
