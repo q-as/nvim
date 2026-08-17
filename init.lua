@@ -41,7 +41,8 @@ vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
 vim.opt_local.ruler = false
 vim.opt_local.showmode = true
-
+vim.opt.swapfile = false
+vim.opt.backup = false
 vim.opt.timeoutlen = 300
 vim.opt.updatetime = 50
 
@@ -663,6 +664,7 @@ local function post_install_setup()
           { "<leader>gd", desc = "Git branches (fzf-lua)" },
           { "<leader>gb", desc = "Git file history (fzf-lua)" },
           { "<leader>gg", desc = "Git Grep (fzf-lua)" },
+          { "<leader>gc", desc = "Git commit" },
           -- 
           -- -- LSP
           { "<leader>vww", desc = "Workspace symbol" },
@@ -746,6 +748,8 @@ local function post_install_setup()
   vim.keymap.set('n', '<leader>gb', function()
       require('fzf-lua').git_bcommits()  -- Histórico do arquivo
   end, { desc = 'Git File History (fzf-lua)' })
+
+  vim.keymap.set('n', '<leader>gc', ':Git commit<CR>', { silent = true, desc = 'Git commit' })
 
   vim.keymap.set('n', '<C-p>', function()
       require('fzf-lua').git_files()  -- Histórico do arquivo
