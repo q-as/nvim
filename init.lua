@@ -342,6 +342,8 @@ require('packer').startup(function(use)
 
   use 'dchinmay2/alabaster.nvim'
 
+  use 'martinsione/darkplus.nvim'
+
   use {
       'nvim-tree/nvim-tree.lua',
       requires = { 'nvim-tree/nvim-web-devicons' },
