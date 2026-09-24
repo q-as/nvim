@@ -1,44 +1,44 @@
 # nvim
 
-[Português](README.pt-BR.md)
+[English](README.md)
 
-Neovim configuration in Lua with fast search, LSP, autocompletion, Git,
-testing, formatting, and shortcuts organized by `which-key`.
+Configuração do Neovim em Lua, com busca rápida, LSP, autocomplete,
+Git, testes, formatação e atalhos organizados pelo `which-key`.
 
-## Overview
+## Visão geral
 
-### Neovim with OpenCode in a split
+### Neovim com OpenCode em split
 
-![Neovim with OpenCode open in a split](https://i.postimg.cc/mkwVsBGx/Captura-de-ecra-de-2026-09-23-14-06-40.png)
+![Neovim com OpenCode aberto em um split](https://i.postimg.cc/mkwVsBGx/Captura-de-ecra-de-2026-09-23-14-06-40.png)
 
-### Main features menu
+### Menu dos principais recursos
 
-Press `Space` to open the shortcuts menu.
+Pressione `Space` para abrir o menu de atalhos.
 
-![Main features menu](https://i.postimg.cc/qvCbtfsW/nvim-plugin-menu.png)
+![Menu de acesso aos principais recursos](https://i.postimg.cc/qvCbtfsW/nvim-plugin-menu.png)
 
 ### Color picker
 
-Press `Space c p` to open the color picker.
+Use `Space c p` para abrir o seletor de cores.
 
-![Color picker](https://i.postimg.cc/T1GQFhBx/Captura-de-ecra-de-2026-09-23-14-11-30.png)
+![Seletor de cores](https://i.postimg.cc/T1GQFhBx/Captura-de-ecra-de-2026-09-23-14-11-30.png)
 
-### Search the current buffer
+### Busca no buffer atual
 
-Press `Space s` to search the open file.
+Use `Space s` para procurar no arquivo aberto.
 
-![Search in the current buffer](https://i.postimg.cc/8PTNBHKH/Captura-de-ecra-de-2026-09-23-14-34-13.png)
+![Busca no buffer atual](https://i.postimg.cc/8PTNBHKH/Captura-de-ecra-de-2026-09-23-14-34-13.png)
 
-### Search the project
+### Busca no projeto
 
-Press `Space Space` to search file contents.
+Use `Space Space` para pesquisar o conteúdo dos arquivos.
 
-![Project-wide grep search](https://i.postimg.cc/Dy7ndgj6/Captura-de-ecra-de-2026-09-23-14-35-02.png)
+![Busca com grep no projeto](https://i.postimg.cc/Dy7ndgj6/Captura-de-ecra-de-2026-09-23-14-35-02.png)
 
-## Installation
+## Instalação
 
-Requires [Neovim](https://neovim.io/) and Git. Back up any existing
-configuration before cloning:
+Requer [Neovim](https://neovim.io/) e Git. Faça backup de uma configuração
+existente antes de clonar:
 
 ```sh
 cd ~/.config
@@ -47,16 +47,16 @@ cd nvim
 nvim init.lua
 ```
 
-Inside Neovim, run:
+Dentro do Neovim, execute:
 
 ```vim
 :so
 :PackerSync
 ```
 
-Restart Neovim after the plugins are installed.
+Reabra o Neovim após a instalação dos plugins.
 
-## Main Keyboard Shortcuts
+## Principais Atalhos Padrões
 
 | Shortcut | Action |
 | --- | --- |
@@ -70,7 +70,7 @@ Restart Neovim after the plugins are installed.
 | `Space g t` | Open Git status |
 | `Space z` | Toggle Zen mode |
 
-## Neovim Keybindings (init.lua – Linux)
+## Keybinds do Neovim (init.lua – Linux)
 
 - **Leader:** `<Space>` (`vim.g.mapleader = " "`)
 - **timeoutlen:** 300 ms (o `which-key` aparece após 300 ms)
@@ -78,7 +78,7 @@ Restart Neovim after the plugins are installed.
 
 ---
 
-## 1. Files, Windows, and Tabs
+## 1. Arquivo, janelas e abas
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -106,7 +106,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>X` | n | `chmod +x` no arquivo atual |
 | `<leader>lw` | n | Alternar quebra de linha (`wrap`) |
 
-## 2. Navigation and Editing
+## 2. Navegação e edição
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -128,7 +128,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>m` | v | Comentar/descomentar as linhas selecionadas |
 | `<leader>cf` | n | Copiar o nome/caminho do arquivo para o clipboard |
 
-## 3. Search and Fuzzy Finder (fzf-lua)
+## 3. Busca e fuzzy finder (fzf-lua)
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -147,7 +147,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>x` | n | Seletor de diretórios – abre em nova aba (`tcd`) |
 | `<leader>/` | n | Pesquisa web (DuckDuckGo) em janela flutuante |
 
-### Inside the Web Search Window
+### Dentro da janela de pesquisa web
 
 | Atalho | O que faz |
 |---|---|
@@ -168,7 +168,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>gg` | n | Git grep (fzf-lua) |
 | `<leader>d` | n | Abrir Diffview |
 
-## 5. LSP and Diagnostics
+## 5. LSP e diagnósticos
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -199,7 +199,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>3` | n | Ir para o arquivo 3 |
 | `<leader>4` | n | Ir para o arquivo 4 |
 
-## 7. Tools, Plugins, and Terminal
+## 7. Ferramentas, plugins e terminal
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -214,7 +214,7 @@ Restart Neovim after the plugins are installed.
 | `<leader>ll` | n | Status do Packer (`:PackerStatus`) |
 | `<leader>lm` | n | Abrir o Mason |
 
-## 8. Multiple Cursors (vim-visual-multi)
+## 8. Múltiplos cursores (vim-visual-multi)
 
 | Atalho | Modo | O que faz |
 |---|---|---|
@@ -222,7 +222,7 @@ Restart Neovim after the plugins are installed.
 | `;n` | n | Adicionar cursor na próxima ocorrência |
 | `;a` | n | Selecionar todas as ocorrências |
 
-## 9. Autocompletion (blink.cmp)
+## 9. Autocompletar (blink.cmp)
 
 Preset `default` do blink.cmp + as seguintes customizações:
 
@@ -236,7 +236,7 @@ Preset `default` do blink.cmp + as seguintes customizações:
 | `<C-y>` | i | Aceitar item |
 | `<C-e>` | i | Esconder o menu |
 
-## 10. Custom Autopairs
+## 10. Autopairs (customizado)
 
 No modo **insert**, ao digitar o caractere de abertura o par é inserido automaticamente; se o próximo caractere já for o fechamento, o cursor apenas pula por cima dele.
 
@@ -249,7 +249,7 @@ No modo **insert**, ao digitar o caractere de abertura o par é inserido automat
 | `'` | `''` |
 | `` ` `` | ` `` ` |
 
-## 11. Dashboard (Startup Screen Without Arguments)
+## 11. Dashboard (tela inicial, sem argumentos)
 
 Atalhos válidos apenas no buffer do dashboard:
 
