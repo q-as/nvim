@@ -26,12 +26,10 @@ end
 
 local packer_bootstrap = ensure_packer()
 
-------------------------------------------------------------
 -- OPÇÕES BÁSICAS
-------------------------------------------------------------
+
 vim.deprecate = function() end
---vim.opt.guicursor = "" -- comando que faz com que seja bloco ao inves de linha
-vim.opt.number = true
+vim.opt.guicursor = ""
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
@@ -40,17 +38,194 @@ vim.g.mapleader = " "
 vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
 vim.opt_local.ruler = false
-vim.opt_local.showmode = true
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.timeoutlen = 300
 vim.opt.updatetime = 50
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 0
-vim.o.statusline = " [FILENAME: %t] %= [TYPE: %Y] [LINE: %l/%L : %c] [%p%%] %{Modified_Get()}"
-vim.o.laststatus = 2
 vim.o.shortmess = vim.o.shortmess .. "atI"
 vim.o.cmdheight = 1
+vim.o.laststatus = 0
+vim.opt.ruler = false
+vim.o.laststatus = 1
+
+-- Opções de desabilitadas teste --
+--vim.opt.cursorline = true
+--vim.o.laststatus = 2
+--vim.o.statusline = " [FILENAME: %t] %= [TYPE: %Y] [LINE: %l/%L : %c] [%p%%] %{Modified_Get()}"
+--vim.opt_local.showmode = true
+--vim.opt.number = true
+
+-- Teste do teste
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_node_provider = 0
+
+vim.g.loaded_gzip = 1
+vim.g.loaded_tarPlugin = 1
+vim.g.loaded_zipPlugin = 1
+vim.g.loaded_tohtml = 1
+vim.g.loaded_tutor_mode_plugin = 1
+
+-- Opções de performance teste --
+vim.g.neovide_cursor_animation_length = 0
+vim.g.neovide_scroll_animation_length = 0
+vim.g.neovide_position_animation_length = 0
+vim.g.neovide_cursor_vfx_mode = ""
+vim.opt.winblend = 0
+vim.opt.pumblend = 0
+vim.opt.smoothscroll = false
+vim.opt.relativenumber = false
+vim.g.neovide_animate_command_line = false
+vim.g.neovide_cursor_animate_in_insert_mode = false
+vim.g.neovide_cursor_animate_command_line = false
+vim.g.neovide_cursor_trail_size = 0
+vim.g.neovide_cursor_smooth_blink = false
+vim.g.neovide_scroll_animation_far_lines = 0
+vim.g.neovide_floating_blur_amount_x = 0
+vim.g.neovide_floating_blur_amount_y = 0
+vim.g.neovide_floating_shadow = false
+vim.g.neovide_opacity = 1.0
+vim.g.neovide_window_blurred = false
+vim.g.neovide_refresh_rate = 60
+vim.g.neovide_refresh_rate_idle = 5
+vim.g.neovide_no_idle = false
+
+function _G.StatusName()
+    if vim.bo.buftype == "terminal" then return "term" end
+    local n = vim.fn.expand("%:t")
+    return n ~= "" and n or "No Name"
+end
+
+vim.o.statusline = " %{v:lua.StatusName()} %m"
+
+local repo_cache = {}
+
+local function esc(s)
+    return (s:gsub("%%", "%%%%"))
+end
+
+-- com cache: o tabline redesenha a cada movimento do cursor,
+-- então não dá para fazer fs_stat em toda chamada
+local function tab_dir(tabnr, buf)
+    local cwd = vim.fn.getcwd(-1, tabnr)
+
+    if vim.bo[buf].filetype == "netrw" then
+        return vim.b[buf].netrw_curdir or cwd
+    end
+    if vim.bo[buf].buftype ~= "" then return cwd end
+
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name == "" or name:match("^%a[%w+.-]*://") then return cwd end
+
+    return vim.fn.fnamemodify(name, ":p:h")
+end
+
+local function get_repo_name(dir)
+    if repo_cache[dir] then return repo_cache[dir] end
+
+    local d, name = dir, nil
+    while d and d ~= "" do
+        if vim.uv.fs_stat(d .. "/.git") then
+            name = vim.fn.fnamemodify(d, ":t")
+            break
+        end
+        local parent = vim.fn.fnamemodify(d, ":h")
+        if parent == d then break end
+        d = parent
+    end
+
+    name = name or vim.fn.fnamemodify(dir, ":t")
+    repo_cache[dir] = name
+    return name
+end
+
+local function is_diffview_tab(tabnr)
+    local tabid = vim.api.nvim_list_tabpages()[tabnr]
+    if not tabid then return false end
+
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabid)) do
+        local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
+        if ft:match("^Diffview") then return true end
+    end
+    return false
+end
+
+function _G.NvimTabLine()
+    local current = vim.fn.tabpagenr()
+    local parts = {}
+
+    for i = 1, vim.fn.tabpagenr("$") do
+        local buf = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+        local repo = get_repo_name(tab_dir(i, buf))
+        local label
+
+        if is_diffview_tab(i) then
+            label = "Diff: " .. repo
+        else
+            local name
+            if vim.bo[buf].buftype == "terminal" then
+                name = "[term]"
+            else
+                name = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
+                if name == "" then name = "[No Name]" end
+            end
+            label = repo .. " - " .. name
+            if i ~= current and vim.bo[buf].modified then
+                label = label .. " +"
+            end
+        end
+
+        local hl = i == current and "%#TabLineSel#" or "%#TabLine#"
+        -- %iT = aba clicável com o mouse
+        parts[#parts + 1] = "%" .. i .. "T" .. hl .. " " .. esc(label) .. " "
+    end
+
+    -- lado direito
+    local ft = vim.bo.filetype
+    ft = ft ~= "" and (" [" .. (ft:gsub("^%l", string.upper)) .. "]") or ""
+
+    local ok, head = pcall(vim.fn.FugitiveHead)
+    local branch = (ok and head ~= "") and (" git:" .. esc(head)) or ""
+
+    local S = vim.diagnostic.severity
+    local d = vim.diagnostic.count(0)
+    local diag = ""
+    if d[S.ERROR] then diag = diag .. " E" .. d[S.ERROR] end
+    if d[S.WARN] then diag = diag .. " W" .. d[S.WARN] end
+
+    local lnum, last = vim.fn.line("."), vim.fn.line("$")
+    local info = branch .. diag .. ft
+        .. " " .. lnum .. "/" .. last .. ":" .. vim.fn.col(".")
+        .. " " .. math.floor(lnum * 100 / last) .. "%%"
+        .. (vim.bo.modified and " [+]" or "")
+        .. " "
+
+    return table.concat(parts, "%#TabLineFill#|") .. "%#TabLineFill#%T%=" .. info
+end
+
+vim.o.showtabline = 2
+vim.o.tabline = "%!v:lua.NvimTabLine()"
+
+vim.api.nvim_create_autocmd("DirChanged", {
+    callback = function() repo_cache = {} end,
+})
+
+vim.api.nvim_create_autocmd({
+    "CursorMoved", "CursorMovedI", "ModeChanged",
+    "TextChanged", "TextChangedI", "BufModifiedSet", "DiagnosticChanged",
+}, {
+    callback = function() vim.cmd.redrawtabline() end,
+})
+
+--vim.o.winbar = "%#TabSep#%{repeat('─', winwidth(0))}"
+
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "NvimTree", "dashboard", "qf", "DiffviewFiles", "DiffviewFileHistory", "trouble" },
+    callback = function() vim.opt_local.winbar = "" end,
+})
 
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "netrw",
@@ -61,13 +236,22 @@ vim.api.nvim_create_autocmd("FileType", {
 
         vim.opt_local.winbar = "%{get(b:, 'netrw_curdir', '')}"
     end,
+
 })
 
-vim.cmd([[
-function! Modified_Get()
-    return &modified ? '[+]' : ''
-endfunction
-]])
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "NvimTree", "qf", "trouble", "netrw", "undotree", "DiffviewFiles", "DiffviewFileHistory" },
+    callback = function() vim.opt_local.statusline = " " end,
+})
+
+local function ts_disable(_, buf)
+    local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
+    if not (ok and stats) then return false end
+
+    local lines = vim.api.nvim_buf_line_count(buf)
+
+    return stats.size > 5 * 1024 * 1024 or (stats.size / math.max(lines, 1)) > 1000
+end
 
 local function web_search()
     local query = vim.fn.input("Search: ")
@@ -75,20 +259,6 @@ local function web_search()
     if query == "" then
         return
     end
-
-    local encoded = vim.fn.system({
-        "curl",
-        "-sG",
-        "--data-urlencode",
-        "q=" .. query,
-        "-o",
-        "/dev/null",
-        "-w",
-        "%{url_effective}",
-        "https://html.duckduckgo.com/html/",
-    })
-
-    encoded = encoded:gsub("\n$", "")
 
     local buf = vim.api.nvim_create_buf(false, true)
 
@@ -224,11 +394,13 @@ local function web_search()
     vim.keymap.set("n", "q", "<cmd>close<CR>", {
         buffer = buf,
         silent = true,
+        desc = "Close web search",
     })
 
     vim.keymap.set("n", "<Esc>", "<cmd>close<CR>", {
         buffer = buf,
         silent = true,
+        desc = "Close web search",
     })
 
     vim.keymap.set("n", "<CR>", function()
@@ -247,74 +419,13 @@ local function web_search()
     end, {
         buffer = buf,
         silent = true,
+        desc = "Open search result",
     })
 end
 
 vim.keymap.set("n", "<leader>/", web_search, {
     desc = "Web search",
 })
-
-local function get_repo_name(cwd)
-    local dir = cwd
-    while dir and dir ~= "" do
-        if vim.uv.fs_stat(dir .. "/.git") then
-            return vim.fn.fnamemodify(dir, ":t")
-        end
-        local parent = vim.fn.fnamemodify(dir, ":h")
-        if parent == dir then break end
-        dir = parent
-    end
-    return vim.fn.fnamemodify(cwd, ":t")
-end
-
-local function is_diffview_tab(tabnr)
-    local ok, tabid = pcall(function() return vim.api.nvim_list_tabpages()[tabnr] end)
-    if not ok or not tabid then return false end
-
-    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabid)) do
-        local buf = vim.api.nvim_win_get_buf(win)
-        local ft = vim.bo[buf].filetype
-        if ft:match("^Diffview") then
-            return true
-        end
-    end
-
-    return false
-end
-
-function _G.NvimTabLine()
-    local s = ""
-
-    for i = 1, vim.fn.tabpagenr("$") do
-        local winnr = vim.fn.tabpagewinnr(i)
-        local buflist = vim.fn.tabpagebuflist(i)
-        local bufnr = buflist[winnr]
-        local cwd = vim.fn.getcwd(-1, i)
-        local repo = get_repo_name(cwd)
-
-        local label
-        if is_diffview_tab(i) then
-            label = "Diff: " .. repo
-        else
-            local fname = vim.fn.bufname(bufnr)
-            fname = (fname ~= "" and vim.fn.fnamemodify(fname, ":t")) or "[No Name]"
-            label = repo .. " - " .. fname
-        end
-
-        if i == vim.fn.tabpagenr() then
-            s = s .. "%#TabLineSel#"
-        else
-            s = s .. "%#TabLine#"
-        end
-
-        s = s .. "%" .. i .. "T" .. " " .. label .. " "
-    end
-
-    s = s .. "%#TabLineFill#"
-    return s
-end
-
-vim.o.tabline = "%!v:lua.NvimTabLine()"
 
 local function setup_autopairs()
     local pairs_map = {
@@ -326,28 +437,373 @@ local function setup_autopairs()
         ['`'] = '`',
     }
 
-    local function insert_pair(l, r)
-        local line = vim.api.nvim_get_current_line()
-        local col = vim.api.nvim_win_get_cursor(0)[2]
-        local before = line:sub(1, col)
-        local after = line:sub(col + 1)
+    local closers = {}
+    for _, r in pairs(pairs_map) do closers[r] = true end
 
-        if after:sub(1, 1) == r then
-            vim.api.nvim_win_set_cursor(0, { vim.fn.line('.'), col + 1 })
-        else
-            vim.api.nvim_set_current_line(before .. l .. r .. after)
-            vim.api.nvim_win_set_cursor(0, { vim.fn.line('.'), col + 1 })
-        end
+    local no_apostrophe = { markdown = true, text = true, gitcommit = true, tex = true }
+
+    local function ctx()
+        local col = vim.api.nvim_win_get_cursor(0)[2]
+        local line = vim.api.nvim_get_current_line()
+        return line:sub(col, col), line:sub(col + 1, col + 1)
+    end
+
+    local function can_close(nxt)
+        return nxt == '' or nxt:match('%s') ~= nil or closers[nxt] == true
     end
 
     for l, r in pairs(pairs_map) do
-        vim.keymap.set('i', l, function()
-            insert_pair(l, r)
-        end, { noremap = true, silent = true })
+        if l ~= r then
+            vim.keymap.set('i', l, function()
+                local _, nxt = ctx()
+                return can_close(nxt) and (l .. r .. '<Left>') or l
+            end, {
+                expr = true,
+                desc = "Insert matching pair",
+            })
+
+            vim.keymap.set('i', r, function()
+                local _, nxt = ctx()
+                return nxt == r and '<Right>' or r
+            end, {
+                expr = true,
+                desc = "Skip matching closer",
+            })
+        else
+            vim.keymap.set('i', l, function()
+                local prev, nxt = ctx()
+                if nxt == l then return '<Right>' end
+                if l == "'" and no_apostrophe[vim.bo.filetype] then return l end
+                if prev:match('[%w_]') or prev == l or not can_close(nxt) then
+                    return l
+                end
+                return l .. l .. '<Left>'
+            end, {
+                expr = true,
+                desc = "Insert matching quote",
+            })
+        end
     end
+
+    vim.keymap.set('i', '<BS>', function()
+        local prev, nxt = ctx()
+        if prev ~= '' and pairs_map[prev] == nxt then
+            return '<BS><Del>'
+        end
+        return '<BS>'
+    end, {
+        expr = true,
+        desc = "Delete matching pair",
+    })
+
+    vim.keymap.set('i', '<CR>', function()
+        if vim.fn.pumvisible() == 1 then return '<CR>' end
+        local prev, nxt = ctx()
+        if (prev == '(' and nxt == ')')
+            or (prev == '[' and nxt == ']')
+            or (prev == '{' and nxt == '}') then
+            return '<CR><C-o>O'
+        end
+        return '<CR>'
+    end, {
+        expr = true,
+        desc = "Expand matching pair",
+    })
 end
 
 setup_autopairs()
+
+-- KEYBIND CHANGER (<leader>cb)
+
+local keybinds = (function()
+    local M = {}
+
+    local backed_up = false
+
+    -- structural binds (autopairs) that must not be changed
+    local PROTECTED = { ["i|<BS>"] = true, ["i|<CR>"] = true }
+
+    local function config_path()
+        local p = vim.env.MYVIMRC
+        if not p or p == "" then
+            p = vim.fn.stdpath("config") .. "/init.lua"
+        end
+        return vim.uv.fs_realpath(p) or p
+    end
+
+    local function expand(lhs)
+        local leader = vim.g.mapleader or "\\"
+        if leader == " " then leader = "<Space>" end
+        return (lhs:gsub("<[Ll]eader>", leader))
+    end
+
+    local function parse_set(line)
+        local s, e = line:find("^%s*vim%.keymap%.set%(")
+        if not s then s, e = line:find("^%s*set%(") end
+        if not s then return end
+        local pos = e + 1
+
+        local modes = {}
+        local ms, me = line:find("^%s*%b{}", pos)
+        if ms then
+            for m in line:sub(ms, me):gmatch("[\"'](%a*)[\"']") do
+                modes[#modes + 1] = m
+            end
+        else
+            local m
+            ms, me, m = line:find("^%s*[\"'](%a*)[\"']", pos)
+            if not ms then return end
+            modes = { m }
+        end
+
+        local cs, ce = line:find("^%s*,%s*", me + 1)
+        if not cs then return end
+
+        local ls, le, _, lhs = line:find("^([\"'])(.-)%1", ce + 1)
+        if not ls then return end
+
+        return modes, lhs, ls, le
+    end
+
+    local function statement(lines, i)
+        local buf, depth = {}, 0
+        for j = i, math.min(i + 60, #lines) do
+            local l = lines[j]
+            buf[#buf + 1] = l
+            local _, o = l:gsub("%(", "")
+            local _, c = l:gsub("%)", "")
+            depth = depth + o - c
+            if depth <= 0 then break end
+        end
+        return table.concat(buf, "\n")
+    end
+
+    local function collect(lines)
+        local wk = {}
+        for i, line in ipairs(lines) do
+            if not line:match("^%s*%-%-") then
+                local lhs, rest = line:match('^%s*{%s*"([^"]+)"%s*,%s*(.*)$')
+                if lhs and not rest:match("group%s*=") then
+                    local desc = rest:match('desc%s*=%s*"([^"]*)"')
+                    if desc then
+                        wk[#wk + 1] = {
+                            lnum = i,
+                            lhs = lhs,
+                            desc = desc,
+                            mode = rest:match('mode%s*=%s*"(%a+)"') or "n",
+                        }
+                    end
+                end
+            end
+        end
+
+        local binds = {}
+        for i, line in ipairs(lines) do
+            if not line:match("^%s*%-%-") then
+                local modes, lhs, ls, le = parse_set(line)
+                if modes and #modes > 0 then
+                    local key = table.concat(modes, ",") .. "|" .. lhs
+                    local stmt = statement(lines, i)
+
+                    local buffer_local = stmt:find("buffer%s*=")
+                        or stmt:find("[%s,]opts%(")
+                        or stmt:find("[%s,]opts%)%s*$")
+
+                    if not buffer_local and not PROTECTED[key] then
+                        local desc = stmt:match('desc%s*=%s*"([^"]*)"')
+                            or stmt:match("desc%s*=%s*'([^']*)'")
+                        if not desc then
+                            for _, w in ipairs(wk) do
+                                if w.lhs == lhs and vim.tbl_contains(modes, w.mode) then
+                                    desc = w.desc
+                                    break
+                                end
+                            end
+                        end
+
+                        binds[#binds + 1] = {
+                            key = key,
+                            lnum = i,
+                            modes = modes,
+                            lhs = lhs,
+                            ls = ls,
+                            le = le,
+                            desc = desc or "(no description)",
+                        }
+                    end
+                end
+            end
+        end
+
+        return binds, wk
+    end
+
+    local function find_global(mode, lhs)
+        local want = vim.keycode(expand(lhs))
+        for _, k in ipairs(vim.api.nvim_get_keymap(mode)) do
+            if vim.keycode(k.lhs) == want then return k end
+        end
+    end
+
+    local function apply_to_file(bind, new)
+        local path = config_path()
+
+        local nr = vim.fn.bufnr(path)
+        if nr ~= -1 and vim.bo[nr].modified then
+            return false, "init.lua has unsaved changes. Save it (:w) and try again."
+        end
+
+        local lines = vim.fn.readfile(path)
+        local binds, wk = collect(lines)
+
+        local target
+        for _, b in ipairs(binds) do
+            if b.key == bind.key then
+                target = b
+                break
+            end
+        end
+        if not target then
+            return false, "Keybind not found in the file (did it change?)."
+        end
+
+        local line = lines[target.lnum]
+        local q = line:sub(target.ls, target.ls)
+        lines[target.lnum] = line:sub(1, target.ls - 1) .. q .. new .. q .. line:sub(target.le + 1)
+
+        for _, w in ipairs(wk) do
+            if w.lhs == bind.lhs and vim.tbl_contains(target.modes, w.mode) then
+                local l = lines[w.lnum]
+                local s, e = l:find('"' .. w.lhs .. '"', 1, true)
+                if s then
+                    local tail = l:sub(e + 1)
+                    local sp = tail:match("^,(%s*)")
+                    if sp then
+                        local pad = math.max(1, #sp - (#new - #w.lhs))
+                        tail = "," .. string.rep(" ", pad) .. tail:sub(#sp + 2)
+                    end
+                    lines[w.lnum] = l:sub(1, s - 1) .. '"' .. new .. '"' .. tail
+                end
+            end
+        end
+
+        if not backed_up then
+            vim.fn.writefile(vim.fn.readfile(path), path .. ".bak")
+            backed_up = true
+        end
+        vim.fn.writefile(lines, path)
+        vim.cmd("checktime")
+        return true
+    end
+
+    local function apply_live(bind, new)
+        for _, mode in ipairs(bind.modes) do
+            local k = find_global(mode, bind.lhs)
+            if k then
+                pcall(vim.keymap.del, mode, expand(bind.lhs))
+                vim.keymap.set(mode, new, k.callback or k.rhs or "", {
+                    silent = k.silent == 1,
+                    expr = k.expr == 1,
+                    nowait = k.nowait == 1,
+                    remap = k.noremap == 0,
+                    desc = k.desc,
+                })
+            end
+        end
+
+        local ok, wk = pcall(require, "which-key")
+        if ok then
+            local spec = {}
+            for _, mode in ipairs(bind.modes) do
+                spec[#spec + 1] = { bind.lhs, hidden = true, mode = mode }
+                spec[#spec + 1] = { new, desc = bind.desc, mode = mode }
+            end
+            pcall(wk.add, spec)
+        end
+    end
+
+    function M.change(bind, binds)
+        vim.ui.input({
+            prompt = ("New key for '%s' (current: %s): "):format(bind.desc, bind.lhs),
+            default = bind.lhs,
+        }, function(new)
+            if not new then return end
+            new = vim.trim(new)
+            if new == "" or new == bind.lhs then return end
+
+            if new:find("[\"'\\%c]") then
+                vim.notify("Invalid key (quotes, backslashes and control characters are not allowed).",
+                    vim.log.levels.ERROR)
+                return
+            end
+
+            for _, b in ipairs(binds) do
+                if b.key ~= bind.key and b.lhs == new then
+                    for _, m in ipairs(b.modes) do
+                        if vim.tbl_contains(bind.modes, m) then
+                            vim.notify(("'%s' is already used by: %s. Change that one first."):format(new, b.desc),
+                                vim.log.levels.ERROR)
+                            return
+                        end
+                    end
+                end
+            end
+
+            for _, mode in ipairs(bind.modes) do
+                local k = find_global(mode, new)
+                if k then
+                    local what = k.desc or k.rhs or "Lua function"
+                    local ans = vim.fn.confirm(
+                        ("'%s' is already mapped (%s) in mode %s. Overwrite?"):format(new, what, mode),
+                        "&Yes\n&No", 2)
+                    if ans ~= 1 then return end
+                    break
+                end
+            end
+
+            local ok, err = apply_to_file(bind, new)
+            if not ok then
+                vim.notify(err, vim.log.levels.ERROR)
+                return
+            end
+
+            apply_live(bind, new)
+            vim.notify(("Keybind changed: %s → %s  (%s)"):format(bind.lhs, new, bind.desc))
+
+            vim.schedule(M.open)
+        end)
+    end
+
+    function M.open()
+        local binds = collect(vim.fn.readfile(config_path()))
+
+        local entries = {}
+        for _, b in ipairs(binds) do
+            entries[#entries + 1] = string.format(
+                "%-24s %-7s %s  :%d", b.lhs, table.concat(b.modes, ","), b.desc, b.lnum)
+        end
+
+        require("fzf-lua").fzf_exec(entries, {
+            prompt = "Binds> ",
+            winopts = { title = " Enter: change the key ", title_pos = "center" },
+            actions = {
+                ["default"] = function(selected)
+                    local sel = selected and selected[1]
+                    if not sel then return end
+                    local lnum = tonumber(sel:match(":(%d+)%s*$"))
+                    for _, b in ipairs(binds) do
+                        if b.lnum == lnum then
+                            vim.schedule(function() M.change(b, binds) end)
+                            return
+                        end
+                    end
+                end,
+            },
+        })
+    end
+
+    return M
+end)()
 
 local function setup_dashboard()
     vim.api.nvim_create_autocmd("VimEnter", {
@@ -436,12 +892,16 @@ local function setup_dashboard()
             vim.keymap.set("n", "n", function()
                 restore_cursor()
                 vim.cmd("enew")
-            end, opts)
+            end, vim.tbl_extend("force", opts, {
+                desc = "New file",
+            }))
 
             vim.keymap.set("n", "e", function()
                 restore_cursor()
                 vim.cmd.Ex()
-            end, opts)
+            end, vim.tbl_extend("force", opts, {
+                desc = "Open file explorer",
+            }))
 
             vim.keymap.set("n", "f", function()
                 restore_cursor()
@@ -450,25 +910,30 @@ local function setup_dashboard()
                 else
                     vim.notify("FZF-Lua não está carregado", vim.log.levels.WARN)
                 end
-            end, opts)
+            end, vim.tbl_extend("force", opts, {
+                desc = "Find file",
+            }))
 
-            vim.keymap.set("n", "wq", ":q!<CR>", opts)
+            vim.keymap.set("n", "wq", ":q!<CR>", vim.tbl_extend("force", opts, {
+                desc = "Quit Neovim",
+            }))
         end,
     })
 end
 
 require('packer').startup(function(use)
     use 'wbthomason/packer.nvim'
+
     use {
         'ibhagwan/fzf-lua',
         requires = { 'nvim-lua/plenary.nvim' },
     }
+
     use {
         'williamboman/mason.nvim',
         tag = 'v1.10.0',
     }
-    use { 'tahayvr/matteblack.nvim', as = 'matteblack' }
-    use 'xero/miasma.nvim'
+
     use {
         'nvim-treesitter/nvim-treesitter',
         run = function()
@@ -479,11 +944,13 @@ require('packer').startup(function(use)
     use 'mbbill/undotree'
     use 'tpope/vim-fugitive'
     use 'neovim/nvim-lspconfig'
+
     use {
         'saghen/blink.cmp',
         tag = 'v1.10.1',
         requires = { 'rafamadriz/friendly-snippets' },
     }
+
     use 'rose-pine/neovim'
     use 'theprimeagen/harpoon'
     use "sindrets/diffview.nvim"
@@ -494,8 +961,6 @@ require('packer').startup(function(use)
     use "folke/which-key.nvim"
 
     use 'dchinmay2/alabaster.nvim'
-
-    use 'martinsione/darkplus.nvim'
 
     use 'mg979/vim-visual-multi'
 
@@ -510,12 +975,12 @@ require('packer').startup(function(use)
 
     use 'windwp/nvim-ts-autotag'
 
+    use 'mofiqul/vscode.nvim'
+
     use {
         'folke/trouble.nvim',
         requires = { 'nvim-tree/nvim-web-devicons' },
     }
-
-    use "flaviodelgrosso/min-theme.nvim"
 
     use {
         'williamboman/mason-lspconfig.nvim',
@@ -531,23 +996,39 @@ end)
 local function post_install_setup()
     setup_dashboard()
 
-    pcall(function()
-        require('fzf-lua').setup({
-            winopts = {
-                height = 0.85,
-                width = 0.85,
-                row = 0.5,
-                col = 0.5,
-                border = 'rounded',
+    require('fzf-lua').setup({
+        winopts = {
+            height = 0.75,
+            width = 0.70,
+            row = 0.5,
+            col = 0.5,
+            border = "rounded",
+            preview = { delay = 150 },
+        },
+        previewers = {
+            builtin = {
+                syntax_limit_b = 1024 * 100,
             },
-            files = {
-                prompt = 'Files❯ ',
-            },
-            grep = {
-                prompt = 'Grep❯ ',
-            },
-        })
-    end)
+        },
+        files = {
+            prompt = 'Files❯ ',
+            file_icons = true,
+            git_icons = false,
+            cmd = "find . \\( -name .git -o -name node_modules -o -name dist -o -name build"
+                .. " -o -name __pycache__ -o -name .venv -o -name .cache \\) -prune"
+                .. " -o -type f -printf '%P\\n'",
+        },
+        grep = {
+            prompt = 'Grep❯ ',
+            file_icons = true,
+            git_icons = false,
+            grep_opts = "--binary-files=without-match --line-number --recursive --color=auto"
+                .. " --perl-regexp"
+                .. " --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist"
+                .. " --exclude-dir=build --exclude-dir=__pycache__ --exclude-dir=.venv"
+                .. " --exclude-dir=.cache -e",
+        },
+    })
 
     pcall(function()
         require("mason").setup()
@@ -720,17 +1201,102 @@ local function post_install_setup()
         local mark = require("harpoon.mark")
         local ui = require("harpoon.ui")
 
-        vim.keymap.set("n", "<leader>a", mark.add_file)
-        vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu)
+        vim.keymap.set("n", "<leader>a", mark.add_file, {
+            desc = "Harpoon: add file",
+        })
 
-        vim.keymap.set("n", "<leader>1", function() ui.nav_file(1) end)
-        vim.keymap.set("n", "<leader>2", function() ui.nav_file(2) end)
-        vim.keymap.set("n", "<leader>3", function() ui.nav_file(3) end)
-        vim.keymap.set("n", "<leader>4", function() ui.nav_file(4) end)
+        vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu, {
+            desc = "Harpoon: toggle menu",
+        })
+
+        vim.keymap.set("n", "<leader>1", function()
+            ui.nav_file(1)
+        end, {
+            desc = "Harpoon: file 1",
+        })
+
+        vim.keymap.set("n", "<leader>2", function()
+            ui.nav_file(2)
+        end, {
+            desc = "Harpoon: file 2",
+        })
+
+        vim.keymap.set("n", "<leader>3", function()
+            ui.nav_file(3)
+        end, {
+            desc = "Harpoon: file 3",
+        })
+
+        vim.keymap.set("n", "<leader>4", function()
+            ui.nav_file(4)
+        end, {
+            desc = "Harpoon: file 4",
+        })
     end)
 
     pcall(function()
+        local api = require("nvim-tree.api")
+
+        local function editor_wins()
+            local wins = {}
+            for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                local buf = vim.api.nvim_win_get_buf(w)
+                if vim.api.nvim_win_get_config(w).relative == ""
+                    and vim.bo[buf].filetype ~= "NvimTree"
+                    and vim.bo[buf].buftype == "" then
+                    table.insert(wins, w)
+                end
+            end
+            return wins
+        end
+
+        local function open_keep_tree()
+            local node = api.tree.get_node_under_cursor()
+            if not node then return end
+
+            if node.nodes then
+                api.node.open.edit()
+                return
+            end
+
+            local wins = editor_wins()
+            local first = #wins == 0
+                or (#wins == 1
+                    and vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(wins[1])) == ""
+                    and not vim.bo[vim.api.nvim_win_get_buf(wins[1])].modified)
+
+            if first then
+                api.node.open.edit()
+            else
+                table.sort(wins, function(a, b)
+                    return vim.api.nvim_win_get_position(a)[2] > vim.api.nvim_win_get_position(b)[2]
+                end)
+                vim.api.nvim_set_current_win(wins[1])
+                vim.cmd("rightbelow vsplit " .. vim.fn.fnameescape(node.absolute_path))
+            end
+
+            api.tree.focus()
+        end
+
+        local function on_attach(bufnr)
+            api.config.mappings.default_on_attach(bufnr)
+
+            local function opts(desc)
+                return {
+                    desc = "nvim-tree: " .. desc,
+                    buffer = bufnr,
+                    noremap = true,
+                    silent = true,
+                    nowait = true
+                }
+            end
+
+            vim.keymap.set("n", "<CR>", open_keep_tree, opts("Open (1st normal, then right split)"))
+            vim.keymap.set("n", "<2-LeftMouse>", open_keep_tree, opts("Open (mouse)"))
+        end
+
         require('nvim-tree').setup({
+            on_attach = on_attach,
             disable_netrw = false,
             hijack_netrw = false,
             hijack_directories = {
@@ -741,7 +1307,7 @@ local function post_install_setup()
                 side = 'left',
             },
             filters = {
-                dotfiles = false,
+                dotfiles = true,
             },
             update_focused_file = {
                 enable = true,
@@ -816,7 +1382,10 @@ local function post_install_setup()
                 alacritty = { enabled = true, font = "18" },
             },
         })
-        vim.keymap.set("n", "<leader>z", "<cmd>ZenMode<cr>", { desc = "Zen Mode" })
+
+        vim.keymap.set("n", "<leader>z", "<cmd>ZenMode<cr>", {
+            desc = "Zen Mode",
+        })
     end)
 
     pcall(function()
@@ -824,14 +1393,23 @@ local function post_install_setup()
             highlight_colors = { enable = true },
             keymaps = { confirm = "<CR>" },
         })
-        vim.keymap.set("n", "<leader>cp", function() require("oklch-color-picker").open_picker() end,
-            { desc = "Open Color Picker" })
-        vim.keymap.set("n", "<leader>cP", function() require("oklch-color-picker").pick_under_cursor() end,
-            { desc = "Pick Color Under Cursor" })
+
+        vim.keymap.set("n", "<leader>cp", function()
+            require("oklch-color-picker").open_picker()
+        end, {
+            desc = "Open Color Picker",
+        })
+
+        vim.keymap.set("n", "<leader>cP", function()
+            require("oklch-color-picker").pick_under_cursor()
+        end, {
+            desc = "Pick Color Under Cursor",
+        })
     end)
 
     pcall(function()
         local wk = require("which-key")
+
         wk.setup({
             preset = "helix",
             delay = 300,
@@ -849,7 +1427,7 @@ local function post_install_setup()
             { "<leader>q",       desc = "Close tab" },
             { "<leader>e",       desc = "Explorer (netrw)" },
             { "<leader>n",       desc = "New file" },
-            --
+
             -- Splits e navegação de janela
             { "<leader>wv",      desc = "Vertical split" },
             { "<leader>ws",      desc = "Horizontal split" },
@@ -857,23 +1435,23 @@ local function post_install_setup()
             { "<leader>wj",      desc = "Go to below window" },
             { "<leader>wk",      desc = "Go to above window" },
             { "<leader>wl",      desc = "Go to right window" },
-            --
+
             -- Terminal / ferramentas externas
             { "<leader>t",       desc = "Open terminal split (zsh)" },
             { "<leader>i",       desc = "Open agy in vsplit" },
             { "<leader>o",       desc = "Open opencode in vsplit" },
-            --
-            -- -- Diffview / NvimTree / Undotree
+
+            -- Diffview / NvimTree / Undotree
             { "<leader>d",       desc = "Diffview open" },
             { "<leader>b",       desc = "Toggle NvimTree" },
             { "<leader>u",       desc = "Toggle Undotree" },
-            --
+
             -- Tabs
             { "<leader><Tab>",   desc = "Next tab" },
             { "<leader><S-Tab>", desc = "Previous tab" },
             { "<leader>N",       desc = "New tab" },
-            --
-            -- Git (fugitive + fzf-lua)
+
+            -- Git
             { "<leader>gt",      desc = "Git status (fugitive)" },
             { "<leader>gl",      desc = "Git log (fzf-lua)" },
             { "<leader>gs",      desc = "Git status (fzf-lua)" },
@@ -881,15 +1459,15 @@ local function post_install_setup()
             { "<leader>gb",      desc = "Git file history (fzf-lua)" },
             { "<leader>gg",      desc = "Git Grep (fzf-lua)" },
             { "<leader>gc",      desc = "Git commit" },
-            --
-            -- -- LSP
+
+            -- LSP
             { "<leader>vww",     desc = "Workspace symbol" },
             { "<leader>vd",      desc = "Open diagnostic float" },
             { "<leader>vca",     desc = "Code action" },
             { "<leader>vrr",     desc = "LSP references" },
             { "<leader>vrn",     desc = "LSP rename" },
-            --
-            -- Busca de arquivos / conteúdo (fzf-lua) + seletor de diretórios
+
+            -- Busca
             { "<leader>f",       desc = "Find files (fzf-lua)" },
             { "<leader>x",       desc = "Open directory (new tab)" },
             { "<leader>s",       desc = "Fuzzy find in current buffer" },
@@ -898,114 +1476,255 @@ local function post_install_setup()
             { "<leader>2",       desc = "Harpoon: file 2" },
             { "<leader>3",       desc = "Harpoon: file 3" },
             { "<leader>4",       desc = "Harpoon: file 4" },
-            --
+
             { "<leader>T",       desc = "Trouble: diagnostics" },
             { "<leader>lT",      desc = "Trouble: quickfix" },
-            -- Comment toggle (modo visual)
+
+            -- Comment toggle
             { "<leader>m",       desc = "Toggle comment",              mode = "v" },
+
+            -- Change binds
+            { "<leader>cb",      desc = "Change keybinds" },
         })
     end)
 
     vim.cmd('hi statusline guibg=NONE')
 
     -- Keymaps globais
-    vim.keymap.set('n', '<leader>ww', ':write<CR>')
-    vim.keymap.set('n', '<leader>wq', ':quit<CR>')
-    vim.keymap.set('n', '<leader>e', vim.cmd.Ex)
-    vim.keymap.set('n', '<leader>n', ':enew<CR>', { desc = 'New File' })
-    vim.keymap.set('n', '<leader>q', ':tabclose<CR>')
+    vim.keymap.set('n', '<leader>ww', ':write<CR>', {
+        desc = 'Write file',
+    })
 
-    vim.keymap.set('n', '<leader>wv', ':vsplit<CR>', { silent = true })
-    vim.keymap.set('n', '<leader>ws', ':split<CR>', { silent = true })
+    vim.keymap.set('n', '<leader>wq', ':quit<CR>', {
+        desc = 'Quit window',
+    })
 
-    vim.keymap.set('n', '<leader>wh', '<C-w>h')
-    vim.keymap.set('n', '<leader>wj', '<C-w>j')
-    vim.keymap.set('n', '<leader>wk', '<C-w>k')
-    vim.keymap.set('n', '<leader>wl', '<C-w>l')
+    vim.keymap.set('n', '<leader>e', vim.cmd.Ex, {
+        desc = 'Open file explorer',
+    })
 
-    vim.keymap.set('n', '<leader>t', ':belowright 12split term://zsh<CR>', { silent = true })
+    vim.keymap.set('n', '<leader>n', ':enew<CR>', {
+        desc = 'New file',
+    })
+
+    vim.keymap.set('n', '<leader>q', ':tabclose<CR>', {
+        desc = 'Close tab',
+    })
+
+    vim.keymap.set('n', '<leader>wv', ':vsplit<CR>', {
+        silent = true,
+        desc = 'Vertical split',
+    })
+
+    vim.keymap.set('n', '<leader>ws', ':split<CR>', {
+        silent = true,
+        desc = 'Horizontal split',
+    })
+
+    vim.keymap.set('n', '<leader>wh', '<C-w>h', {
+        desc = 'Go to left window',
+    })
+
+    vim.keymap.set('n', '<leader>wj', '<C-w>j', {
+        desc = 'Go to below window',
+    })
+
+    vim.keymap.set('n', '<leader>wk', '<C-w>k', {
+        desc = 'Go to above window',
+    })
+
+    vim.keymap.set('n', '<leader>wl', '<C-w>l', {
+        desc = 'Go to right window',
+    })
+
+    vim.keymap.set('n', '<leader>t', ':belowright 12split term://zsh<CR>', {
+        silent = true,
+        desc = 'Open terminal split',
+    })
 
     vim.keymap.set('n', '<leader>i', function()
         vim.cmd('vsplit')
         vim.cmd('wincmd l')
         vim.cmd('vertical resize 50')
         vim.cmd('terminal agy')
-    end, { silent = true, desc = 'Open CLI' })
+    end, {
+        silent = true,
+        desc = 'Open AGY CLI',
+    })
 
     vim.keymap.set('n', '<leader>o', function()
         vim.cmd('vsplit')
         vim.cmd('wincmd l')
         vim.cmd('vertical resize 50')
         vim.cmd('terminal ~/bin/opencode --model litellm-pr/gemma4-saj')
-    end, { silent = true, desc = 'Open CLI' })
+    end, {
+        silent = true,
+        desc = 'Open OpenCode CLI',
+    })
 
-    vim.keymap.set('n', '<leader>d', ':DiffviewOpen<CR>', { silent = true, desc = 'Diffview' })
-    vim.keymap.set('n', '<leader>b', ':NvimTreeToggle<CR>', { silent = true, desc = 'Toggle NvimTree' })
-    vim.keymap.set('n', '<leader><Tab>', ':tabnext<CR>', { silent = true, desc = 'Next tab' })
-    vim.keymap.set('n', '<leader><S-Tab>', ':tabprevious<CR>', { silent = true, desc = 'Last tab' })
-    vim.keymap.set('n', '<leader>N', ':tabnew<CR>', { silent = true, desc = 'New tab' })
+    vim.keymap.set('n', '<leader>d', ':DiffviewOpen<CR>', {
+        silent = true,
+        desc = 'Open Diffview',
+    })
 
-    vim.keymap.set('n', ']e', ':cnext<CR>zz', { silent = true, desc = "Next error" })
-    vim.keymap.set('n', '[e', ':cprevious<CR>zz', { silent = true, desc = "Previous error" })
-    vim.keymap.set('n', '<leader>co', ':copen<CR>', { silent = true, desc = "Open quickfix" })
+    vim.keymap.set('n', '<leader>b', ':NvimTreeToggle<CR>', {
+        silent = true,
+        desc = 'Toggle NvimTree',
+    })
 
-    vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)
-    vim.keymap.set('n', '<leader>gt', vim.cmd.Git)
+    vim.keymap.set('n', '<leader><Tab>', ':tabnext<CR>', {
+        silent = true,
+        desc = 'Next tab',
+    })
+
+    vim.keymap.set('n', '<leader><S-Tab>', ':tabprevious<CR>', {
+        silent = true,
+        desc = 'Previous tab',
+    })
+
+    vim.keymap.set('n', '<leader>N', ':tabnew<CR>', {
+        silent = true,
+        desc = 'New tab',
+    })
+
+    vim.keymap.set('n', ']e', ':cnext<CR>zz', {
+        silent = true,
+        desc = 'Next error',
+    })
+
+    vim.keymap.set('n', '[e', ':cprevious<CR>zz', {
+        silent = true,
+        desc = 'Previous error',
+    })
+
+    vim.keymap.set('n', '<leader>co', ':copen<CR>', {
+        silent = true,
+        desc = 'Open quickfix',
+    })
+
+    vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle, {
+        desc = 'Toggle Undotree',
+    })
+
+    vim.keymap.set('n', '<leader>gt', vim.cmd.Git, {
+        desc = 'Git status (Fugitive)',
+    })
 
     vim.keymap.set('n', '<leader>gl', function()
         require('fzf-lua').git_commits()
-    end, { desc = 'Git Log (fzf-lua)' })
+    end, {
+        desc = 'Git log (fzf-lua)',
+    })
 
     vim.keymap.set('n', '<leader>gs', function()
         require('fzf-lua').git_status()
-    end, { desc = 'Git Status (fzf-lua)' })
+    end, {
+        desc = 'Git status (fzf-lua)',
+    })
 
     vim.keymap.set('n', '<leader>gd', function()
         require('fzf-lua').git_branches()
-    end, { desc = 'Git Branches (fzf-lua)' })
+    end, {
+        desc = 'Git branches (fzf-lua)',
+    })
 
     vim.keymap.set('n', '<leader>gb', function()
         require('fzf-lua').git_bcommits()
-    end, { desc = 'Git File History (fzf-lua)' })
+    end, {
+        desc = 'Git file history (fzf-lua)',
+    })
 
-    vim.keymap.set('n', '<leader>gc', ':Git commit<CR>', { silent = true, desc = 'Git commit' })
+    vim.keymap.set('n', '<leader>gc', ':Git commit<CR>', {
+        silent = true,
+        desc = 'Git commit',
+    })
 
     vim.keymap.set('n', '<C-p>', function()
         require('fzf-lua').git_files()
-    end, { desc = 'Git Files (fzf-lua)' })
+    end, {
+        desc = 'Git files (fzf-lua)',
+    })
 
-    vim.keymap.set("n", "gd", vim.lsp.buf.definition)
-    vim.keymap.set("n", "K", vim.lsp.buf.hover)
-    vim.keymap.set("n", "<leader>vww", vim.lsp.buf.workspace_symbol)
-    vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float)
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_next)
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_prev)
-    vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action)
-    vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references)
-    vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename)
-    vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help)
+    vim.keymap.set("n", "gd", vim.lsp.buf.definition, {
+        desc = "LSP: go to definition",
+    })
 
-    vim.keymap.set('n', '<leader>T', '<cmd>Trouble diagnostics toggle<CR>', { desc = 'Trouble: diagnostics' })
-    vim.keymap.set('n', '<leader>lT', '<cmd>Trouble qflist toggle<CR>', { desc = 'Trouble: quickfix' })
+    vim.keymap.set("n", "K", vim.lsp.buf.hover, {
+        desc = "LSP: hover documentation",
+    })
+
+    vim.keymap.set("n", "<leader>vww", vim.lsp.buf.workspace_symbol, {
+        desc = "LSP: workspace symbols",
+    })
+
+    vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, {
+        desc = "LSP: diagnostic float",
+    })
+
+    vim.keymap.set("n", "]d", vim.diagnostic.goto_next, {
+        desc = "LSP: next diagnostic",
+    })
+
+    vim.keymap.set("n", "d[", vim.diagnostic.goto_prev, {
+        desc = "LSP: previous diagnostic",
+    })
+
+    vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, {
+        desc = "LSP: code action",
+    })
+
+    vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, {
+        desc = "LSP: references",
+    })
+
+    vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, {
+        desc = "LSP: rename",
+    })
+
+    vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help, {
+        desc = "LSP: signature help",
+    })
+
+    vim.keymap.set('n', '<leader>-', function()
+        vim.opt.number = not vim.opt.number:get()
+    end, {
+        desc = 'Toggle line numbers',
+    })
+
+    vim.keymap.set('n', '<leader>T', '<cmd>Trouble diagnostics toggle<CR>', {
+        desc = 'Trouble: diagnostics',
+    })
+
+    vim.keymap.set('n', '<leader>lT', '<cmd>Trouble qflist toggle<CR>', {
+        desc = 'Trouble: quickfix',
+    })
 
     vim.keymap.set('n', '<leader>f', function()
         require('fzf-lua').files()
-    end, { desc = 'FZF Files' })
+    end, {
+        desc = 'FZF: find files',
+    })
 
     vim.keymap.set('n', '<leader><leader>', function()
         require('fzf-lua').live_grep()
-    end, { desc = 'FZF Grep' })
+    end, {
+        desc = 'FZF: live grep',
+    })
 
     vim.keymap.set('n', '<leader>s', function()
         require('fzf-lua').blines()
-    end, { desc = 'Fuzzy find in current buffer' })
+    end, {
+        desc = 'FZF: current buffer',
+    })
 
     vim.keymap.set('n', '<leader>gg', function()
         require('fzf-lua').live_grep({
             cmd = "git grep --line-number --column --color=always",
             prompt = 'GitGrep❯ ',
         })
-    end, { desc = 'Live Grep (git files only)' })
+    end, {
+        desc = 'FZF: Git grep',
+    })
 
     vim.keymap.set("v", "<leader>m", function()
         local cs = vim.bo.commentstring
@@ -1040,7 +1759,9 @@ local function post_install_setup()
         end
 
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "n", false)
-    end, { desc = "toggle comentário na seleção" })
+    end, {
+        desc = "Toggle comment",
+    })
 
     ------------------------------------------------------------
     -- KEYMAPS GLOBAIS EXTRAS
@@ -1048,143 +1769,215 @@ local function post_install_setup()
     local set = vim.keymap.set
     local kopts = { noremap = true, silent = true }
 
-    set("n", "ss", ":split<Return>", kopts)
-    set("n", "sv", ":vsplit<Return>", kopts)
-    set("n", "sx", "<cmd>close<CR>", kopts)
+    set("n", "ss", ":split<Return>", vim.tbl_extend("force", kopts, {
+        desc = "Horizontal split",
+    }))
 
-    set("n", "<leader>X", "<cmd>!chmod +x %<CR>", { silent = true, desc = "Make current file executable" })
+    set("n", "sv", ":vsplit<Return>", vim.tbl_extend("force", kopts, {
+        desc = "Vertical split",
+    }))
 
-    set("n", "<C-a>", "gg<S-v>G")
+    set("n", "sx", "<cmd>close<CR>", vim.tbl_extend("force", kopts, {
+        desc = "Close window",
+    }))
 
-    set({ "n", "o", "x" }, "<s-h>", "^", { desc = "Jump to beginning of line" })
-    set({ "n", "o", "x" }, "<s-l>", "g_", { desc = "Jump to end of line" })
+    set("n", "<leader>X", "<cmd>!chmod +x %<CR>", {
+        silent = true,
+        desc = "Make current file executable",
+    })
 
-    set("n", "<leader>cf", '<cmd>let @+ = expand("%")<CR>', { desc = "Copy File Name" })
+    set("n", "<C-a>", "gg<S-v>G", {
+        desc = "Select entire file",
+    })
 
-    set("n", "<C-u>", "<C-u>zz")
-    set("n", "<C-d>", "<C-d>zz")
-    set("n", "n", "nzzzv", kopts)
-    set("n", "N", "Nzzzv", kopts)
+    set({ "n", "o", "x" }, "<s-h>", "^", {
+        desc = "Jump to beginning of line",
+    })
 
-    set("v", "<", "<gv", kopts)
-    set("v", ">", ">gv", kopts)
+    set({ "n", "o", "x" }, "<s-l>", "g_", {
+        desc = "Jump to end of line",
+    })
 
-    set("n", "<leader>lw", "<cmd>set wrap!<CR>", kopts)
+    set("n", "<leader>cf", '<cmd>let @+ = expand("%")<CR>', {
+        desc = "Copy file name",
+    })
 
-    set("v", "K", ":m '<-2<CR>gv=gv", { silent = true })
-    set("v", "J", ":m '>+1<CR>gv=gv", { silent = true })
+    set("n", "<C-u>", "<C-u>zz", {
+        desc = "Scroll up and center",
+    })
 
-    set("n", "x", '"_x', kopts)
+    set("n", "<C-d>", "<C-d>zz", {
+        desc = "Scroll down and center",
+    })
 
-    set("n", "<leader>rr", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+    set("n", "n", "nzzzv", vim.tbl_extend("force", kopts, {
+        desc = "Next search result",
+    }))
 
-    set({ "n", "v" }, "<leader>dd", [["_d]])
-    set("x", "p", [["_dP]])
+    set("n", "N", "Nzzzv", vim.tbl_extend("force", kopts, {
+        desc = "Previous search result",
+    }))
 
-    set("n", "<leader><left>", ":vertical resize +20<cr>")
-    set("n", "<leader><right>", ":vertical resize -20<cr>")
-    set("n", "<leader><up>", ":resize +10<cr>")
-    set("n", "<leader><down>", ":resize -10<cr>")
+    set("v", "<", "<gv", vim.tbl_extend("force", kopts, {
+        desc = "Indent left and keep selection",
+    }))
 
-    set("n", "<leader>ll", "<cmd>PackerStatus<CR>", { desc = "Open Packer status" })
-    set("n", "<leader>lm", "<cmd>Mason<CR>", { desc = "Open Mason LSP installer" })
+    set("v", ">", ">gv", vim.tbl_extend("force", kopts, {
+        desc = "Indent right and keep selection",
+    }))
 
-    --set("n", "<leader><leader>", function() require("fzf-lua").files({ hidden = true }) end, { desc = "Search Files" })
-    set("n", "<leader>ch", function() require("fzf-lua").help_tags() end, { desc = "Search Help" })
-    set("n", "<leader>ck", function() require("fzf-lua").keymaps() end, { desc = "Search Keymaps" })
-    set("n", "<leader>cs", function() require("fzf-lua").builtin() end, { desc = "Search Select" })
-    set("n", "<leader>cw", function() require("fzf-lua").grep_cword() end, { desc = "Search Word" })
-    set("n", "<leader>cd", function() require("fzf-lua").diagnostics_document() end,
-        { desc = "Search Diagnostics (buf)" })
-    set("n", "<leader>cD", function() require("fzf-lua").diagnostics_workspace() end,
-        { desc = "Search Diagnostics (ws)" })
+    set("n", "<leader>lw", "<cmd>set wrap!<CR>", vim.tbl_extend("force", kopts, {
+        desc = "Toggle line wrap",
+    }))
 
-    set('n', ';s', '<Plug>(VM-Find-Under)', { remap = true, desc = 'Multi-cursor: find under cursor' })
-    set('n', ';n', '<Plug>(VM-Add-Cursor-At-Next)', { remap = true, desc = 'Multi-cursor: next occurrence' })
-    set('n', ';a', '<Plug>(VM-Select-All)', { remap = true, desc = 'Multi-cursor: select all' })
-    --set('n', ';mp', '<Plug>(VM-Remove-Region)', { remap = true, desc = 'Multi-cursor: remove last region' })
+    set("v", "K", ":m '<-2<CR>gv=gv", {
+        silent = true,
+        desc = "Move selection up",
+    })
 
-    -- vim.keymap.set("n", "<leader>//", function()
-    -- local query = vim.fn.input("Google: ")
-    --
-    -- if query ~= "" then
-    -- vim.fn.jobstart({
-    -- "xdg-open",
-    -- "https://www.google.com/search?q=" .. query,
-    -- }, {
-    -- detach = true,
-    -- })
-    -- end
-    -- end, { desc = "Pesquisar no Google" })
+    set("v", "J", ":m '>+1<CR>gv=gv", {
+        silent = true,
+        desc = "Move selection down",
+    })
 
-    local dirs_cache
+    set("n", "x", '"_x', vim.tbl_extend("force", kopts, {
+        desc = "Delete character without yanking",
+    }))
+
+    set("n", "<leader>rr", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], {
+        desc = "Replace word under cursor",
+    })
+
+    set('n', 'dd', '"_dd', {
+        desc = "Delete line without yanking",
+    })
+
+    set('v', 'd', '"_d', {
+        desc = "Delete selection without yanking",
+    })
+
+    set("x", "p", [["_dP]], {
+        desc = "Paste without overwriting register",
+    })
+
+    set("n", "<leader><left>", ":vertical resize +20<cr>", {
+        desc = "Increase window width",
+    })
+
+    set("n", "<leader><right>", ":vertical resize -20<cr>", {
+        desc = "Decrease window width",
+    })
+
+    set("n", "<leader><up>", ":resize +10<cr>", {
+        desc = "Increase window height",
+    })
+
+    set("n", "<leader><down>", ":resize -10<cr>", {
+        desc = "Decrease window height",
+    })
+
+    set("n", "<leader>ll", "<cmd>PackerStatus<CR>", {
+        desc = "Open Packer status",
+    })
+
+    set("n", "<leader>lm", "<cmd>Mason<CR>", {
+        desc = "Open Mason LSP installer",
+    })
+
+    set("n", "<leader>ch", function()
+        require("fzf-lua").help_tags()
+    end, {
+        desc = "Search help",
+    })
+
+    set("n", "<leader>ck", function()
+        require("fzf-lua").keymaps()
+    end, {
+        desc = "Search keymaps",
+    })
+
+    set("n", "<leader>cs", function()
+        require("fzf-lua").builtin()
+    end, {
+        desc = "Search selectors",
+    })
+
+    set("n", "<leader>cw", function()
+        require("fzf-lua").grep_cword()
+    end, {
+        desc = "Search word under cursor",
+    })
+
+    set("n", "<leader>cd", function()
+        require("fzf-lua").diagnostics_document()
+    end, {
+        desc = "Search buffer diagnostics",
+    })
+
+    set("n", "<leader>cD", function()
+        require("fzf-lua").diagnostics_workspace()
+    end, {
+        desc = "Search workspace diagnostics",
+    })
+
+    set("n", "<leader>cb", function()
+        keybinds.open()
+    end, {
+        desc = "Change keybinds",
+    })
+
+    set('n', ';s', '<Plug>(VM-Find-Under)', {
+        remap = true,
+        desc = 'Multi-cursor: find under cursor',
+    })
+
+    set('n', ';n', '<Plug>(VM-Add-Cursor-At-Next)', {
+        remap = true,
+        desc = 'Multi-cursor: next occurrence',
+    })
+
+    set('n', ';a', '<Plug>(VM-Select-All)', {
+        remap = true,
+        desc = 'Multi-cursor: select all',
+    })
+
     local ignored = {
-        [".git"] = true,
-        ["node_modules"] = true,
-        ["dist"] = true,
-        ["build"] = true,
-        [".cache"] = true,
-        [".npm"] = true,
-        [".cargo"] = true,
-        [".rustup"] = true,
+        ".git", "node_modules", "dist", "build",
+        ".cache", ".npm", ".cargo", ".rustup",
     }
 
-    local function scan_dirs(root, include_hidden)
-        local result = {}
-        local stack = { root }
+    local function dirs_cmd()
+        local home = vim.env.HOME
+        local extra_roots = { home .. "/.config", home .. "/.local/bin" }
+        local q = vim.fn.shellescape
 
-        while #stack > 0 do
-            local path = stack[#stack]
-            stack[#stack] = nil
+        local names = {}
+        for _, n in ipairs(ignored) do
+            names[#names + 1] = "-name " .. q(n)
+        end
+        local ignored_expr = table.concat(names, " -o ")
 
-            local handle = vim.uv.fs_scandir(path)
+        local parts = {
+            string.format(
+                "find %s -mindepth 1 \\( -name '.*' -o %s \\) -prune -o -type d -print",
+                q(home), ignored_expr
+            ),
+        }
 
-            if handle then
-                while true do
-                    local name, type = vim.uv.fs_scandir_next(handle)
-
-                    if not name then
-                        break
-                    end
-
-                    if type == "directory" then
-                        local hidden = name:byte(1) == 46
-
-                        if (include_hidden or not hidden) and not ignored[name] then
-                            local dir = path .. "/" .. name
-
-                            result[#result + 1] = dir
-                            stack[#stack + 1] = dir
-                        end
-                    end
-                end
+        for _, root in ipairs(extra_roots) do
+            if vim.uv.fs_stat(root) then
+                parts[#parts + 1] = string.format(
+                    "find %s \\( %s \\) -prune -o -type d -print",
+                    q(root), ignored_expr
+                )
             end
         end
 
-        return result
+        return "{ " .. table.concat(parts, "; ") .. "; } 2>/dev/null | sort"
     end
 
     local function open_dir_picker(new_tab)
-        if not dirs_cache then
-            local home = vim.env.HOME
-            local config = home .. "/.config"
-
-            dirs_cache = scan_dirs(home, false)
-
-            if vim.uv.fs_stat(config) then
-                dirs_cache[#dirs_cache + 1] = config
-
-                local config_dirs = scan_dirs(config, true)
-
-                for i = 1, #config_dirs do
-                    dirs_cache[#dirs_cache + 1] = config_dirs[i]
-                end
-            end
-
-            table.sort(dirs_cache)
-        end
-
-        require("fzf-lua").fzf_exec(dirs_cache, {
+        require("fzf-lua").fzf_exec(dirs_cmd(), {
             prompt = "Dirs> ",
             fzf_opts = {
                 ["--height"] = "100%",
@@ -1193,14 +1986,10 @@ local function post_install_setup()
                 ["--margin"] = "0",
                 ["--padding"] = "0",
             },
-
             actions = {
                 ["default"] = function(selected)
                     local dir = selected[1]
-
-                    if not dir or dir == "" then
-                        return
-                    end
+                    if not dir or dir == "" then return end
 
                     if new_tab then
                         vim.cmd("tabnew")
@@ -1217,11 +2006,15 @@ local function post_install_setup()
 
     vim.keymap.set("n", "<C-x>", function()
         open_dir_picker(false)
-    end, { desc = "Open directory (current tab)" })
+    end, {
+        desc = "Open directory (current tab)",
+    })
 
     vim.keymap.set("n", "<leader>x", function()
         open_dir_picker(true)
-    end, { desc = "Open directory (new tab)" })
+    end, {
+        desc = "Open directory (new tab)",
+    })
 
     pcall(function()
         require('nvim-treesitter.configs').setup({
@@ -1239,14 +2032,16 @@ local function post_install_setup()
                 "elixir",
                 "python",
             },
-            sync_install = true,
-            auto_install = true,
             highlight = {
                 enable = true,
+                disable = ts_disable,
             },
             indent = {
                 enable = true,
+                disable = ts_disable,
             },
+            sync_install = true,
+            auto_install = true,
         })
     end)
 end
@@ -1273,7 +2068,6 @@ end
 
 function ColorMyPencils(color)
     color = color or "alabaster"
-    --color = color or "tema"
 
     local ok = pcall(vim.cmd.colorscheme, color)
     if not ok then
@@ -1284,7 +2078,7 @@ function ColorMyPencils(color)
 
     vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
     vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
-    vim.api.nvim_set_hl(0, "LineNr", { fg = "#b5b5b5" })
+    vim.api.nvim_set_hl(0, "LineNr", { fg = "#393939" })
     vim.api.nvim_set_hl(0, "MsgArea", { bg = "none" })
 
     vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
@@ -1298,6 +2092,10 @@ function ColorMyPencils(color)
     vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
     vim.api.nvim_set_hl(0, "LineNr", { fg = "#b5b5b5" })
     vim.api.nvim_set_hl(0, "MsgArea", { bg = "none" })
+    vim.api.nvim_set_hl(0, "TabSep", { fg = "#555555" })
+    vim.api.nvim_set_hl(0, "WinBar", { bg = "none" })
+    vim.api.nvim_set_hl(0, "WinBarNC", { bg = "none" })
+    vim.api.nvim_set_hl(0, "TabLineSel", { bold = true, fg = "#e5c07b" })
 end
 
 ColorMyPencils()
