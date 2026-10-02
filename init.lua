@@ -50,6 +50,8 @@ vim.o.laststatus = 0
 vim.opt.ruler = false
 vim.o.laststatus = 1
 
+vim.keymap.set('n', 'q', '<Nop>')
+
 -- Opções de desabilitadas teste --
 --vim.opt.cursorline = true
 --vim.o.laststatus = 2
@@ -57,19 +59,19 @@ vim.o.laststatus = 1
 --vim.opt_local.showmode = true
 --vim.opt.number = true
 
--- Teste do teste
+-- teste do teste
 vim.g.loaded_python3_provider = 0
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 
 vim.g.loaded_gzip = 1
-vim.g.loaded_tarPlugin = 1
-vim.g.loaded_zipPlugin = 1
+vim.g.loaded_tarplugin = 1
+vim.g.loaded_zipplugin = 1
 vim.g.loaded_tohtml = 1
 vim.g.loaded_tutor_mode_plugin = 1
 
--- Opções de performance teste --
+-- opções de performance teste --
 vim.g.neovide_cursor_animation_length = 0
 vim.g.neovide_scroll_animation_length = 0
 vim.g.neovide_position_animation_length = 0
@@ -977,6 +979,8 @@ require('packer').startup(function(use)
 
     use 'mofiqul/vscode.nvim'
 
+    use 'flaviodelgrosso/min-theme.nvim'
+
     use {
         'folke/trouble.nvim',
         requires = { 'nvim-tree/nvim-web-devicons' },
@@ -1008,6 +1012,14 @@ local function post_install_setup()
         previewers = {
             builtin = {
                 syntax_limit_b = 1024 * 100,
+                extensions = {
+                    ["png"]  = { "chafa", "{file}" },
+                    ["jpg"]  = { "chafa", "{file}" },
+                    ["jpeg"] = { "chafa", "{file}" },
+                    ["gif"]  = { "chafa", "{file}" },
+                    ["webp"] = { "chafa", "{file}" },
+                    ["svg"]  = { "chafa", "{file}" },
+                },
             },
         },
         files = {
@@ -2096,6 +2108,11 @@ function ColorMyPencils(color)
     vim.api.nvim_set_hl(0, "WinBar", { bg = "none" })
     vim.api.nvim_set_hl(0, "WinBarNC", { bg = "none" })
     vim.api.nvim_set_hl(0, "TabLineSel", { bold = true, fg = "#e5c07b" })
+
+    -- local float_bg = "#1e1e1e"
+    -- vim.api.nvim_set_hl(0, "NormalFloat", { bg = float_bg })
+    -- vim.api.nvim_set_hl(0, "FloatBorder", { bg = float_bg })
+    -- vim.api.nvim_set_hl(0, "Pmenu", { bg = float_bg })
 end
 
 ColorMyPencils()
