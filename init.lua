@@ -979,6 +979,8 @@ require('packer').startup(function(use)
 
     use 'mofiqul/vscode.nvim'
 
+    use 'RRethy/base16-nvim'
+
     use 'flaviodelgrosso/min-theme.nvim'
 
     use {
@@ -2080,6 +2082,7 @@ end
 
 function ColorMyPencils(color)
     color = color or "alabaster"
+    --color = color or "base16-black-metal"
 
     local ok = pcall(vim.cmd.colorscheme, color)
     if not ok then
