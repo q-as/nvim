@@ -1862,17 +1862,17 @@ local function post_install_setup()
         desc = "Replace word under cursor",
     })
 
-    set('n', 'dd', '"_dd', {
-        desc = "Delete line without yanking",
-    })
+    --set('n', 'dd', '"_dd', {
+    --    desc = "Delete line without yanking",
+    --})
 
-    set('v', 'd', '"_d', {
-        desc = "Delete selection without yanking",
-    })
+    --set('v', 'd', '"_d', {
+    --    desc = "Delete selection without yanking",
+    --})
 
-    set("x", "p", [["_dP]], {
-        desc = "Paste without overwriting register",
-    })
+    --set("x", "p", [["_dP]], {
+    --    desc = "Paste without overwriting register",
+    --})
 
     set("n", "<leader><left>", ":vertical resize +20<cr>", {
         desc = "Increase window width",
