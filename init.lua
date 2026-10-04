@@ -57,7 +57,7 @@ vim.keymap.set('n', 'q', '<Nop>')
 --vim.o.laststatus = 2
 --vim.o.statusline = " [FILENAME: %t] %= [TYPE: %Y] [LINE: %l/%L : %c] [%p%%] %{Modified_Get()}"
 --vim.opt_local.showmode = true
---vim.opt.number = true
+vim.opt.number = true
 
 -- teste do teste
 vim.g.loaded_python3_provider = 0
