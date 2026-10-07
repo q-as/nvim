@@ -2595,91 +2595,6 @@ local function github_dark()
     })
 end
 
-local function apprentice()
-    local hl = vim.api.nvim_set_hl
-
-    local c = {
-        bg      = '#262626',
-        fg      = '#bcbcbc',
-        dim     = '#6c6c6c',
-        keyword = '#87afd7',
-        func    = '#ffffaf',
-        string  = '#87af87',
-        type    = '#8787af',
-        const   = '#ff8700',
-        comment = '#6c6c6c',
-        special = '#5f875f',
-        error   = '#af5f5f',
-        warn    = '#ff8700',
-        info    = '#5f8787',
-        sel     = '#303030',
-        line    = '#303030',
-    }
-
-    -- UI
-    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
-    hl(0, 'NormalFloat', { fg = c.fg, bg = '#444444' })
-    hl(0, 'FloatBorder', { fg = '#585858', bg = '#444444' })
-    hl(0, 'SignColumn', { fg = c.dim, bg = '#1c1c1c' })
-    hl(0, 'LineNr', { fg = c.dim, bg = '#1c1c1c' })
-    hl(0, 'CursorLine', { bg = c.line })
-    hl(0, 'CursorLineNr', { fg = c.fg, bg = c.line, bold = true })
-    hl(0, 'NonText', { fg = '#585858', bg = c.bg })
-    hl(0, 'EndOfBuffer', { fg = '#585858', bg = c.bg })
-    hl(0, 'ColorColumn', { bg = '#1c1c1c' })
-    hl(0, 'VertSplit', { fg = '#444444', bg = '#444444' })
-    hl(0, 'WinSeparator', { fg = '#444444', bg = c.bg })
-    hl(0, 'Visual', { fg = '#87afd7', bg = c.bg, reverse = true })
-    hl(0, 'Search', { fg = '#262626', bg = '#ffffaf' })
-    hl(0, 'IncSearch', { fg = '#262626', bg = '#af5f5f', bold = true })
-    hl(0, 'MatchParen', { fg = '#ffffaf', bg = '#1c1c1c', bold = true })
-
-    -- Completion
-    hl(0, 'Pmenu', { fg = c.fg, bg = '#444444' })
-    hl(0, 'PmenuSel', { fg = '#262626', bg = '#5f8787', bold = true })
-    hl(0, 'PmenuSbar', { bg = '#585858' })
-    hl(0, 'PmenuThumb', { bg = '#5f8787' })
-
-    -- Sintaxe
-    hl(0, 'Comment', { fg = c.comment })
-    hl(0, 'Constant', { fg = c.const })
-    hl(0, 'String', { fg = c.string })
-    hl(0, 'Character', { fg = c.string })
-    hl(0, 'Number', { fg = c.const })
-    hl(0, 'Float', { fg = c.const })
-    hl(0, 'Boolean', { fg = c.const })
-    hl(0, 'Identifier', { fg = '#5f87af' })
-    hl(0, 'Function', { fg = c.func })
-    hl(0, 'Statement', { fg = c.keyword })
-    hl(0, 'Conditional', { fg = c.keyword })
-    hl(0, 'Repeat', { fg = c.keyword })
-    hl(0, 'Exception', { fg = c.keyword })
-    hl(0, 'Keyword', { fg = c.keyword })
-    hl(0, 'Include', { fg = c.keyword })
-    hl(0, 'PreProc', { fg = '#5f8787' })
-    hl(0, 'Macro', { fg = '#5f8787' })
-    hl(0, 'Operator', { fg = c.keyword })
-    hl(0, 'Delimiter', { fg = c.special })
-    hl(0, 'Type', { fg = c.type })
-    hl(0, 'StorageClass', { fg = c.type })
-    hl(0, 'Structure', { fg = c.type })
-    hl(0, 'Special', { fg = c.special })
-    hl(0, 'Error', { fg = c.error, bold = true })
-    hl(0, 'Todo', { fg = '#262626', bg = '#ffffaf', bold = true })
-
-    -- Diagnósticos
-    hl(0, 'DiagnosticError', { fg = c.error })
-    hl(0, 'DiagnosticWarn', { fg = c.warn })
-    hl(0, 'DiagnosticInfo', { fg = c.info })
-    hl(0, 'DiagnosticHint', { fg = c.special })
-
-    -- Diff
-    hl(0, 'DiffAdd', { fg = '#87afff', bg = '#303030' })
-    hl(0, 'DiffChange', { fg = '#dfdfdf', bg = '#303030' })
-    hl(0, 'DiffDelete', { fg = '#ffdf87', bg = '#303030' })
-    hl(0, 'DiffText', { fg = '#afafaf', bg = '#303030', bold = true })
-end
-
 function ColorMyPencils(color)
     --color = color or "alabaster"
 
@@ -2688,11 +2603,10 @@ function ColorMyPencils(color)
         return
     end
 
-    --dark()
+    dark()
     --gruber()
     --theme()
     --github_dark()
-    apprentice()
     remove_all_italics()
 
     vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
