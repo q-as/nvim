@@ -96,6 +96,60 @@ vim.g.neovide_refresh_rate = 60
 vim.g.neovide_refresh_rate_idle = 5
 vim.g.neovide_no_idle = false
 
+local watchers = {}
+
+local function unwatch(buf)
+    local w = watchers[buf]
+    if not w then return end
+    watchers[buf] = nil
+    w:stop()
+    if not w:is_closing() then w:close() end
+end
+
+local watch
+
+watch = function(buf)
+    if watchers[buf] or not vim.api.nvim_buf_is_valid(buf) then return end
+    if vim.bo[buf].buftype ~= "" then return end
+
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name == "" or not vim.uv.fs_stat(name) then return end
+
+    local w = vim.uv.new_fs_event()
+    if not w then return end
+
+    local ok = w:start(name, {}, vim.schedule_wrap(function()
+        if vim.api.nvim_buf_is_valid(buf) then
+            vim.cmd("silent! checktime " .. buf)
+        end
+        unwatch(buf)
+        watch(buf)
+    end))
+
+    if not ok then
+        w:close()
+        return
+    end
+    watchers[buf] = w
+end
+
+local reload_group = vim.api.nvim_create_augroup("AutoReload", { clear = true })
+
+vim.api.nvim_create_autocmd({ "BufReadPost", "BufEnter" }, {
+    group = reload_group,
+    callback = function(a) watch(a.buf) end,
+})
+
+vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    group = reload_group,
+    callback = function(a) unwatch(a.buf) end,
+})
+
+vim.api.nvim_create_autocmd("FocusGained", {
+    group = reload_group,
+    callback = function() vim.cmd("silent! checktime") end,
+})
+
 function _G.StatusName()
     if vim.bo.buftype == "terminal" then return "term" end
     local n = vim.fn.expand("%:t")
