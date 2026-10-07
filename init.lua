@@ -2596,14 +2596,14 @@ local function github_dark()
 end
 
 function ColorMyPencils(color)
-    --color = color or "alabaster"
+    color = color or "alabaster"
 
     local ok = pcall(vim.cmd.colorscheme, color)
     if not ok then
         return
     end
 
-    dark()
+    --dark()
     --gruber()
     --theme()
     --github_dark()
