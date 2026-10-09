@@ -1,4 +1,3 @@
--- linux
 if vim.loader then
     vim.loader.enable()
 end
@@ -164,8 +163,6 @@ local function esc(s)
     return (s:gsub("%%", "%%%%"))
 end
 
--- com cache: o tabline redesenha a cada movimento do cursor,
--- então não dá para fazer fs_stat em toda chamada
 local function tab_dir(tabnr, buf)
     local cwd = vim.fn.getcwd(-1, tabnr)
 
@@ -236,11 +233,9 @@ function _G.NvimTabLine()
         end
 
         local hl = i == current and "%#TabLineSel#" or "%#TabLine#"
-        -- %iT = aba clicável com o mouse
         parts[#parts + 1] = "%" .. i .. "T" .. hl .. " " .. esc(label) .. " "
     end
 
-    -- lado direito
     local ft = vim.bo.filetype
     ft = ft ~= "" and (" [" .. (ft:gsub("^%l", string.upper)) .. "]") or ""
 
@@ -276,8 +271,6 @@ vim.api.nvim_create_autocmd({
 }, {
     callback = function() vim.cmd.redrawtabline() end,
 })
-
---vim.o.winbar = "%#TabSep#%{repeat('─', winwidth(0))}"
 
 vim.api.nvim_create_autocmd("FileType", {
     pattern = { "NvimTree", "dashboard", "qf", "DiffviewFiles", "DiffviewFileHistory", "trouble" },
@@ -2043,40 +2036,56 @@ local function post_install_setup()
     local ignored = {
         ".git", "node_modules", "dist", "build",
         ".cache", ".npm", ".cargo", ".rustup",
+        "venv", ".venv", "__pycache__", "target",
+        "vendor", "staticfiles", "coverage",
     }
+
+    local q = vim.fn.shellescape
+    local cache_file = vim.fn.stdpath("cache") .. "/dirs.txt"
 
     local function dirs_cmd()
         local home = vim.env.HOME
         local extra_roots = { home .. "/.config", home .. "/.local/bin" }
-        local q = vim.fn.shellescape
 
         local names = {}
         for _, n in ipairs(ignored) do
             names[#names + 1] = "-name " .. q(n)
         end
         local ignored_expr = table.concat(names, " -o ")
+        local depth = 6
 
         local parts = {
             string.format(
-                "find %s -mindepth 1 \\( -name '.*' -o %s \\) -prune -o -type d -print",
-                q(home), ignored_expr
+                "find %s -mindepth 1 -maxdepth %d \\( -name '.*' -o %s \\) -prune -o -type d -print",
+                q(home), depth, ignored_expr
             ),
         }
 
         for _, root in ipairs(extra_roots) do
             if vim.uv.fs_stat(root) then
                 parts[#parts + 1] = string.format(
-                    "find %s \\( %s \\) -prune -o -type d -print",
-                    q(root), ignored_expr
+                    "find %s -maxdepth %d \\( %s \\) -prune -o -type d -print",
+                    q(root), depth, ignored_expr
                 )
             end
         end
 
-        return "{ " .. table.concat(parts, "; ") .. "; } 2>/dev/null | sort"
+        return "{ " .. table.concat(parts, "; ") .. "; } 2>/dev/null"
+    end
+
+    local function refresh_cache()
+        local tmp = cache_file .. ".tmp"
+        local cmd = string.format("%s > %s && mv %s %s", dirs_cmd(), q(tmp), q(tmp), q(cache_file))
+        vim.system({ "sh", "-c", cmd }, {})
     end
 
     local function open_dir_picker(new_tab)
-        require("fzf-lua").fzf_exec(dirs_cmd(), {
+        local source = dirs_cmd()
+        if vim.uv.fs_stat(cache_file) then
+            source = "cat " .. q(cache_file)
+        end
+
+        require("fzf-lua").fzf_exec(source, {
             prompt = "Dirs> ",
             fzf_opts = {
                 ["--height"] = "100%",
@@ -2101,19 +2110,20 @@ local function post_install_setup()
                 end,
             },
         })
+
+        refresh_cache()
     end
 
-    vim.keymap.set("n", "<C-x>", function()
-        open_dir_picker(false)
-    end, {
-        desc = "Open directory (current tab)",
+    vim.api.nvim_create_autocmd("VimEnter", {
+        once = true,
+        callback = function() vim.defer_fn(refresh_cache, 200) end,
     })
 
-    vim.keymap.set("n", "<leader>x", function()
-        open_dir_picker(true)
-    end, {
-        desc = "Open directory (new tab)",
-    })
+    vim.keymap.set("n", "<C-x>", function() open_dir_picker(false) end,
+        { desc = "Open directory (current tab)" })
+
+    vim.keymap.set("n", "<leader>x", function() open_dir_picker(true) end,
+        { desc = "Open directory (new tab)" })
 
     pcall(function()
         require('nvim-treesitter.configs').setup({
@@ -2306,432 +2316,6 @@ local function gruber()
     hl(0, 'DiffText', { bg = '#303a52', bold = true })
 end
 
-local function git()
-    local hl = vim.api.nvim_set_hl
-
-    local c = {
-        bg      = '#121212',
-        fg      = '#E6E6E6',
-        dim     = '#777777',
-
-        keyword = '#5599FF', -- azul
-        func    = '#FFD75F', -- amarelo suave
-        string  = '#00FFFF', -- ciano
-        type    = '#FF5555', -- vermelho
-        const   = '#FF69B4', -- rosa
-        comment = '#666666', -- cinza
-
-        special = '#FFFF00', -- amarelo
-        error   = '#FF0000', -- vermelho
-        warn    = '#00BFFF', -- azul/ciano
-        info    = '#FF00FF', -- magenta
-
-        sel     = '#303030',
-        line    = '#1C1C1C',
-    }
-
-    -- local c = {
-    -- bg      = '#000000',
-    -- fg      = '#FFFFFF',
-    -- dim     = '#808080',
-    --
-    -- keyword = '#FFFF00', -- amarelo
-    -- func    = '#FF00FF', -- rosa
-    -- string  = '#00FFFF', -- ciano
-    -- type    = '#FF0000', -- vermelho
-    -- const   = '#0000FF', -- azul
-    -- comment = '#808080',
-    --
-    -- special = '#00FFFF',
-    --
-    -- error   = '#FF0000',
-    -- warn    = '#FFFF00',
-    -- info    = '#0000FF',
-    --
-    -- sel     = '#333333',
-    -- line    = '#111111',
-    -- }
-
-    -- Base / UI
-    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
-    hl(0, 'NormalFloat', { fg = c.fg, bg = '#161b22' })
-    hl(0, 'FloatBorder', { fg = '#30363d', bg = '#161b22' })
-    hl(0, 'SignColumn', { bg = c.bg })
-
-    hl(0, 'LineNr', { fg = '#484f58', bg = c.bg })
-    hl(0, 'CursorLine', { bg = c.line })
-    hl(0, 'CursorLineNr', { fg = '#e3b341', bg = c.bg, bold = true })
-
-    hl(0, 'NonText', { fg = '#21262d', bg = c.bg })
-    hl(0, 'SpecialKey', { fg = '#21262d', bg = c.bg })
-    hl(0, 'EndOfBuffer', { fg = c.bg, bg = c.bg })
-    hl(0, 'ColorColumn', { bg = c.line })
-
-    hl(0, 'StatusLine', { fg = c.fg, bg = '#0f141a' })
-    hl(0, 'StatusLineNC', { fg = c.dim, bg = '#020304' })
-
-    hl(0, 'VertSplit', { fg = '#30363d', bg = c.bg })
-    hl(0, 'WinSeparator', { fg = '#30363d', bg = c.bg })
-
-    hl(0, 'Visual', { bg = c.sel })
-
-    hl(0, 'Search', {
-        fg = '#0d1117',
-        bg = '#e3b341',
-    })
-
-    hl(0, 'IncSearch', {
-        fg = '#0d1117',
-        bg = '#e3b341',
-        bold = true,
-    })
-
-    hl(0, 'MatchParen', {
-        fg = '#ffffff',
-        bg = '#30363d',
-        bold = true,
-    })
-
-    -- Completion
-    hl(0, 'Pmenu', {
-        fg = c.fg,
-        bg = '#161b22',
-    })
-
-    hl(0, 'PmenuSel', {
-        fg = '#ffffff',
-        bg = '#264f78',
-        bold = true,
-    })
-
-    hl(0, 'PmenuSbar', {
-        bg = '#21262d',
-    })
-
-    hl(0, 'PmenuThumb', {
-        bg = '#484f58',
-    })
-
-    hl(0, 'Folded', {
-        fg = c.dim,
-        bg = c.line,
-    })
-
-    hl(0, 'Title', {
-        fg = c.func,
-        bold = true,
-    })
-
-    hl(0, 'Directory', {
-        fg = c.func,
-    })
-
-    -- Tabline
-    hl(0, 'TabLine', {
-        fg = c.dim,
-        bg = '#161b22',
-    })
-
-    hl(0, 'TabLineSel', {
-        fg = '#ffffff',
-        bg = '#21262d',
-        bold = true,
-    })
-
-    hl(0, 'TabLineFill', {
-        fg = c.fg,
-        bg = '#0d1117',
-    })
-
-    -- Sintaxe
-    hl(0, 'Comment', { fg = c.comment })
-
-    hl(0, 'Constant', { fg = c.const })
-    hl(0, 'String', { fg = c.string })
-    hl(0, 'Character', { fg = c.string })
-
-    hl(0, 'Number', { fg = c.const })
-    hl(0, 'Float', { fg = c.const })
-    hl(0, 'Boolean', { fg = c.const })
-
-    hl(0, 'Identifier', { fg = c.fg })
-    hl(0, 'Function', { fg = c.func })
-
-    hl(0, 'Statement', { fg = c.keyword })
-    hl(0, 'Conditional', { fg = c.keyword })
-    hl(0, 'Repeat', { fg = c.keyword })
-    hl(0, 'Exception', { fg = c.keyword })
-    hl(0, 'Keyword', { fg = c.keyword })
-
-    hl(0, 'Include', { fg = c.keyword })
-    hl(0, 'PreProc', { fg = c.keyword })
-    hl(0, 'Macro', { fg = c.keyword })
-
-    hl(0, 'Operator', { fg = c.fg })
-    hl(0, 'Delimiter', { fg = '#8b949e' })
-
-    hl(0, 'Type', { fg = c.type })
-    hl(0, 'StorageClass', { fg = c.keyword })
-    hl(0, 'Structure', { fg = c.type })
-
-    hl(0, 'Special', { fg = c.special })
-
-    hl(0, 'Error', {
-        fg = c.error,
-        bold = true,
-    })
-
-    hl(0, 'Todo', {
-        fg = '#0d1117',
-        bg = '#e3b341',
-        bold = true,
-    })
-
-    -- Diagnósticos
-    hl(0, 'DiagnosticError', { fg = c.error })
-    hl(0, 'DiagnosticWarn', { fg = c.warn })
-    hl(0, 'DiagnosticInfo', { fg = c.info })
-    hl(0, 'DiagnosticHint', { fg = c.type })
-
-    hl(0, 'DiagnosticUnderlineError', {
-        undercurl = true,
-        sp = c.error,
-    })
-
-    hl(0, 'DiagnosticUnderlineWarn', {
-        undercurl = true,
-        sp = c.warn,
-    })
-
-    -- Diff
-    hl(0, 'DiffAdd', {
-        bg = '#12261e',
-    })
-
-    hl(0, 'DiffDelete', {
-        fg = '#ff7b72',
-        bg = '#2d1617',
-    })
-
-    hl(0, 'DiffChange', {
-        bg = '#17243a',
-    })
-
-    hl(0, 'DiffText', {
-        bg = '#264f78',
-        bold = true,
-    })
-end
-
-local function manoj()
-    local hl = vim.api.nvim_set_hl
-
-    local c = {
-        bg      = '#000000',
-        fg      = '#F5F5F5',
-
-        keyword = '#00FFFF', -- cyan1
-        func    = '#7FFFD4', -- Aquamarine
-        string  = '#00FFFF', -- Cyan
-        type    = '#63B8FF', -- SteelBlue1
-        const   = '#8470FF', -- LightSlateBlue
-        comment = '#808080',
-
-        special = '#FFD700', -- Gold
-        error   = '#A52A2A', -- Brown1
-        warn    = '#FFA500', -- Orange
-        info    = '#FFB6C1', -- LightPink1
-
-        sel     = '#4169E1', -- RoyalBlue3
-        line    = '#111111',
-    }
-
-    -- UI
-    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
-    hl(0, 'NormalFloat', { fg = c.fg, bg = c.bg })
-    hl(0, 'FloatBorder', { fg = '#404040', bg = c.bg })
-    hl(0, 'SignColumn', { bg = c.bg })
-    hl(0, 'LineNr', { fg = '#666666', bg = c.bg })
-    hl(0, 'CursorLine', { bg = c.line })
-    hl(0, 'CursorLineNr', { fg = c.special, bg = c.bg, bold = true })
-    hl(0, 'NonText', { fg = '#333333', bg = c.bg })
-    hl(0, 'SpecialKey', { fg = '#333333', bg = c.bg })
-    hl(0, 'EndOfBuffer', { fg = c.bg, bg = c.bg })
-    hl(0, 'ColorColumn', { bg = c.line })
-
-    hl(0, 'StatusLine', { fg = '#000000', bg = '#BFBFBF' })
-    hl(0, 'StatusLineNC', { fg = '#CCCCCC', bg = '#4D4D4D' })
-    hl(0, 'WinSeparator', { fg = '#404040', bg = c.bg })
-    hl(0, 'VertSplit', { fg = '#404040', bg = c.bg })
-    hl(0, 'Visual', { fg = '#FFFFFF', bg = c.sel })
-
-    -- Search / completion
-    hl(0, 'Search', { fg = '#000000', bg = '#FFD700' })
-    hl(0, 'IncSearch', { fg = '#000000', bg = '#FFD700', bold = true })
-    hl(0, 'MatchParen', { fg = '#FFFFFF', bg = '#444444', bold = true })
-
-    hl(0, 'Pmenu', { fg = c.fg, bg = '#111111' })
-    hl(0, 'PmenuSel', { fg = '#000000', bg = '#00FFFF', bold = true })
-    hl(0, 'PmenuSbar', { bg = '#333333' })
-    hl(0, 'PmenuThumb', { bg = '#777777' })
-
-    hl(0, 'Folded', { fg = c.comment, bg = c.line })
-    hl(0, 'Title', { fg = c.func, bold = true })
-    hl(0, 'Directory', { fg = c.type })
-
-    -- Tabline
-    hl(0, 'TabLine', { fg = '#999999', bg = '#111111' })
-    hl(0, 'TabLineSel', { fg = '#FFFFFF', bg = '#333333', bold = true })
-    hl(0, 'TabLineFill', { fg = c.fg, bg = c.bg })
-
-    -- Syntax
-    hl(0, 'Comment', { fg = c.comment })
-    hl(0, 'Constant', { fg = c.const, bold = true })
-    hl(0, 'String', { fg = c.string })
-    hl(0, 'Character', { fg = c.string })
-    hl(0, 'Number', { fg = c.const })
-    hl(0, 'Float', { fg = c.const })
-    hl(0, 'Boolean', { fg = c.const, bold = true })
-    hl(0, 'Identifier', { fg = c.fg })
-    hl(0, 'Function', { fg = c.func })
-
-    for _, group in ipairs({
-        'Statement', 'Conditional', 'Repeat', 'Exception',
-        'Keyword', 'Include', 'PreProc', 'Macro',
-    }) do
-        hl(0, group, { fg = c.keyword })
-    end
-
-    hl(0, 'Operator', { fg = c.fg })
-    hl(0, 'Delimiter', { fg = '#B0C4DE' })
-    hl(0, 'Type', { fg = c.type })
-    hl(0, 'StorageClass', { fg = c.keyword })
-    hl(0, 'Structure', { fg = c.type })
-    hl(0, 'Special', { fg = c.special })
-
-    hl(0, 'Error', { fg = c.error, bold = true })
-    hl(0, 'Todo', { fg = '#000000', bg = '#FFD700', bold = true })
-
-    -- Diagnostics
-    hl(0, 'DiagnosticError', { fg = c.error })
-    hl(0, 'DiagnosticWarn', { fg = c.warn })
-    hl(0, 'DiagnosticInfo', { fg = c.info })
-    hl(0, 'DiagnosticHint', { fg = c.type })
-
-    hl(0, 'DiagnosticUnderlineError', { undercurl = true, sp = c.error })
-    hl(0, 'DiagnosticUnderlineWarn', { undercurl = true, sp = c.warn })
-
-    -- Diff
-    hl(0, 'DiffAdd', { bg = '#12301F' })
-    hl(0, 'DiffDelete', { fg = '#FF6B6B', bg = '#301515' })
-    hl(0, 'DiffChange', { bg = '#172535' })
-    hl(0, 'DiffText', { bg = '#4169E1', bold = true })
-end
-
-local function modus()
-    local hl = vim.api.nvim_set_hl
-
-    local c = {
-        bg      = '#000000',
-        fg      = '#FFFFFF',
-        dim     = '#989898',
-
-        keyword = '#6AE4E4',
-        func    = '#FEAC8A',
-        string  = '#79A8FF',
-        type    = '#B6A0FF',
-        const   = '#00D3D0',
-        comment = '#989898',
-
-        special = '#F78FE7',
-        error   = '#FF8059',
-        warn    = '#FEC43F',
-        info    = '#2FDF84',
-
-        sel     = '#5A5A5A',
-        line    = '#1E1E1E',
-    }
-
-    -- UI
-    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
-    hl(0, 'NormalFloat', { fg = c.fg, bg = '#0F0F0F' })
-    hl(0, 'FloatBorder', { fg = '#505050', bg = '#0F0F0F' })
-    hl(0, 'SignColumn', { bg = c.bg })
-    hl(0, 'LineNr', { fg = '#606060', bg = c.bg })
-    hl(0, 'CursorLine', { bg = c.line })
-    hl(0, 'CursorLineNr', { fg = c.warn, bg = c.bg, bold = true })
-    hl(0, 'NonText', { fg = '#404040', bg = c.bg })
-    hl(0, 'EndOfBuffer', { fg = c.bg, bg = c.bg })
-    hl(0, 'ColorColumn', { bg = c.line })
-    hl(0, 'WinSeparator', { fg = '#505050', bg = c.bg })
-    hl(0, 'Visual', { bg = c.sel })
-
-    hl(0, 'StatusLine', { fg = c.fg, bg = '#303030' })
-    hl(0, 'StatusLineNC', { fg = c.dim, bg = '#181818' })
-
-    -- Search / completion
-    hl(0, 'Search', { fg = '#000000', bg = c.warn })
-    hl(0, 'IncSearch', { fg = '#000000', bg = c.warn, bold = true })
-    hl(0, 'MatchParen', { fg = c.fg, bg = '#505050', bold = true })
-
-    hl(0, 'Pmenu', { fg = c.fg, bg = '#101010' })
-    hl(0, 'PmenuSel', { fg = '#000000', bg = c.keyword, bold = true })
-    hl(0, 'PmenuSbar', { bg = '#303030' })
-    hl(0, 'PmenuThumb', { bg = '#707070' })
-
-    hl(0, 'Folded', { fg = c.dim, bg = c.line })
-    hl(0, 'Title', { fg = c.func, bold = true })
-    hl(0, 'Directory', { fg = c.keyword })
-
-    -- Tabline
-    hl(0, 'TabLine', { fg = c.dim, bg = '#101010' })
-    hl(0, 'TabLineSel', { fg = c.fg, bg = '#303030', bold = true })
-    hl(0, 'TabLineFill', { fg = c.dim, bg = c.bg })
-
-    -- Syntax
-    hl(0, 'Comment', { fg = c.comment, italic = true })
-    hl(0, 'Constant', { fg = c.const })
-    hl(0, 'String', { fg = c.string })
-    hl(0, 'Character', { fg = c.string })
-    hl(0, 'Number', { fg = c.const })
-    hl(0, 'Float', { fg = c.const })
-    hl(0, 'Boolean', { fg = c.const, bold = true })
-    hl(0, 'Identifier', { fg = c.fg })
-    hl(0, 'Function', { fg = c.func })
-
-    for _, group in ipairs({
-        'Statement', 'Conditional', 'Repeat', 'Exception',
-        'Keyword', 'Include', 'PreProc', 'Macro',
-    }) do
-        hl(0, group, { fg = c.keyword })
-    end
-
-    hl(0, 'Operator', { fg = c.fg })
-    hl(0, 'Delimiter', { fg = '#B0B0B0' })
-    hl(0, 'Type', { fg = c.type })
-    hl(0, 'StorageClass', { fg = c.keyword })
-    hl(0, 'Structure', { fg = c.type })
-    hl(0, 'Special', { fg = c.special })
-
-    hl(0, 'Error', { fg = c.error, bold = true })
-    hl(0, 'Todo', { fg = '#000000', bg = c.warn, bold = true })
-
-    -- Diagnostics
-    hl(0, 'DiagnosticError', { fg = c.error })
-    hl(0, 'DiagnosticWarn', { fg = c.warn })
-    hl(0, 'DiagnosticInfo', { fg = c.info })
-    hl(0, 'DiagnosticHint', { fg = c.type })
-
-    hl(0, 'DiagnosticUnderlineError', { undercurl = true, sp = c.error })
-    hl(0, 'DiagnosticUnderlineWarn', { undercurl = true, sp = c.warn })
-
-    -- Diff
-    hl(0, 'DiffAdd', { bg = '#12351F' })
-    hl(0, 'DiffDelete', { fg = c.error, bg = '#351515' })
-    hl(0, 'DiffChange', { bg = '#172B3A' })
-    hl(0, 'DiffText', { bg = '#3A5F8A', bold = true })
-end
-
 local function reverse()
     local hl = vim.api.nvim_set_hl
 
@@ -2852,9 +2436,6 @@ function ColorMyPencils(color)
 
     --dark()
     --gruber()
-    --git()
-    --manoj()
-    --modus()
     reverse()
     remove_all_italics()
 
