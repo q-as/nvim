@@ -1597,6 +1597,22 @@ local function post_install_setup()
         desc = 'Go to right window',
     })
 
+    vim.keymap.set('t', '<C-w>h', [[<C-\><C-n><C-w>h]], {
+        desc = 'Move to left window'
+    })
+
+    vim.keymap.set('t', '<C-w>j', [[<C-\><C-n><C-w>j]], {
+        desc = 'Move to lower window'
+    })
+
+    vim.keymap.set('t', '<C-w>k', [[<C-\><C-n><C-w>k]], {
+        desc = 'Move to upper window'
+    })
+
+    vim.keymap.set('t', '<C-w>l', [[<C-\><C-n><C-w>l]], {
+        desc = 'Move to right window'
+    })
+
     vim.keymap.set('n', '<leader>t', ':belowright 12split term://zsh<CR>', {
         silent = true,
         desc = 'Open terminal split',
