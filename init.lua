@@ -28,7 +28,7 @@ local packer_bootstrap = ensure_packer()
 -- OPÇÕES BÁSICAS
 
 vim.deprecate = function() end
-vim.opt.guicursor = ""
+vim.opt.guicursor = "a:block"
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
@@ -66,9 +66,15 @@ vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 
 vim.g.loaded_gzip = 1
-vim.g.loaded_tarplugin = 1
-vim.g.loaded_zipplugin = 1
-vim.g.loaded_tohtml = 1
+vim.g.loaded_tarPlugin = 1
+vim.g.loaded_zipPlugin = 1
+vim.g.loaded_2html_plugin = 1
+vim.g.loaded_getscriptPlugin = 1
+vim.g.loaded_vimballPlugin = 1
+vim.g.loaded_spellfile_plugin = 1
+vim.g.loaded_logiPat = 1
+vim.g.loaded_rrhelper = 1
+vim.g.loaded_matchit = 1
 vim.g.loaded_tutor_mode_plugin = 1
 
 -- opções de performance teste --
@@ -1002,7 +1008,19 @@ require('packer').startup(function(use)
     }
 
     use 'theprimeagen/harpoon'
-    use "sindrets/diffview.nvim"
+    use {
+        'sindrets/diffview.nvim',
+        cmd = { 'DiffviewOpen', 'DiffviewFileHistory' },
+        config = function()
+            require('diffview').setup({
+                view = {
+                    default = { layout = "diff2_horizontal" },
+                    file_history = { layout = "diff2_horizontal" },
+                },
+                panel = { position = "left", width = 20 },
+            })
+        end,
+    }
 
     use { 'folke/zen-mode.nvim' }
     use { 'eero-lehtinen/oklch-color-picker.nvim' }
@@ -1018,8 +1036,6 @@ require('packer').startup(function(use)
         requires = { 'nvim-tree/nvim-web-devicons' },
     }
 
-    use 'nvim-neotest/nvim-nio'
-
     use 'stevearc/conform.nvim'
 
     use 'windwp/nvim-ts-autotag'
@@ -1030,6 +1046,7 @@ require('packer').startup(function(use)
 
     use {
         'esmuellert/codediff.nvim',
+        cmd = 'CodeDiff',
         config = function()
             pcall(function()
                 require('codediff').setup({
@@ -1041,6 +1058,7 @@ require('packer').startup(function(use)
             end)
         end,
     }
+
     use {
         'folke/trouble.nvim',
         requires = { 'nvim-tree/nvim-web-devicons' },
@@ -1388,20 +1406,6 @@ local function post_install_setup()
     end)
 
     pcall(function()
-        require('neotest').setup({
-            adapters = {
-                require('neotest-python')({
-                    dap = { justMyCode = false },
-                    runner = 'pytest',
-                }),
-                require('neotest-jest')({
-                    jestCommand = 'npx jest',
-                }),
-            },
-        })
-    end)
-
-    pcall(function()
         require('conform').setup({
             formatters_by_ft = {
                 python = { 'ruff_format' },
@@ -1426,23 +1430,6 @@ local function post_install_setup()
 
     pcall(function()
         require('trouble').setup()
-    end)
-
-    pcall(function()
-        require('diffview').setup({
-            view = {
-                default = {
-                    layout = "diff2_horizontal",
-                },
-                file_history = {
-                    layout = "diff2_horizontal",
-                },
-            },
-            panel = {
-                position = "left",
-                width = 20,
-            },
-        })
     end)
 
     pcall(function()
