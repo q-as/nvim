@@ -2413,6 +2413,118 @@ local function reverse()
     hl(0, 'DiffText', { fg = '#FFFF00', bold = true })
 end
 
+local function modus()
+    local hl = vim.api.nvim_set_hl
+
+    local c = {
+        bg       = '#000000',
+        fg       = '#FFFFFF',
+        dim      = '#989898',
+
+        keyword  = '#FEACD0', -- Rosa
+        func     = '#79A8FF', -- Azul
+        string   = '#6AE4B9', -- Verde-água
+        type     = '#00D3D0', -- Ciano
+        const    = '#D0BC00', -- Amarelo
+        variable = '#FFFFFF', -- Branco
+        comment  = '#989898', -- Cinza
+
+        special  = '#B6A0FF', -- Lilás
+        error    = '#FF8059', -- Vermelho-coral
+        warn     = '#D0BC00', -- Amarelo
+        info     = '#44BC44', -- Verde
+
+        sel      = '#2F447F',
+        line     = '#1A1A1A',
+    }
+
+    -- UI
+    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
+    hl(0, 'NormalFloat', { fg = c.fg, bg = c.bg })
+    hl(0, 'FloatBorder', { fg = '#595959', bg = c.bg })
+    hl(0, 'SignColumn', { bg = c.bg })
+    hl(0, 'LineNr', { fg = '#595959', bg = c.bg })
+    hl(0, 'CursorLine', { bg = c.line })
+    hl(0, 'CursorLineNr', { fg = c.fg, bold = true })
+    hl(0, 'NonText', { fg = '#404040', bg = c.bg })
+    hl(0, 'EndOfBuffer', { fg = c.bg, bg = c.bg })
+    hl(0, 'ColorColumn', { bg = c.line })
+    hl(0, 'WinSeparator', { fg = '#404040', bg = c.bg })
+    hl(0, 'Visual', { bg = c.sel })
+
+    hl(0, 'StatusLine', { fg = c.fg, bg = '#333333' })
+    hl(0, 'StatusLineNC', { fg = c.dim, bg = c.bg })
+
+    -- Search / completion
+    hl(0, 'Search', { fg = c.bg, bg = '#D0BC00' })
+    hl(0, 'IncSearch', { fg = c.bg, bg = '#FF8059' })
+    hl(0, 'MatchParen', { fg = c.fg, bg = '#454545', bold = true })
+
+    hl(0, 'Pmenu', { fg = c.fg, bg = c.bg })
+    hl(0, 'PmenuSel', { fg = c.fg, bg = '#454545', bold = true })
+    hl(0, 'PmenuSbar', { bg = '#333333' })
+    hl(0, 'PmenuThumb', { bg = '#989898' })
+
+    hl(0, 'Folded', { fg = c.dim, bg = '#1A1A1A' })
+    hl(0, 'Title', { fg = c.func, bold = true })
+    hl(0, 'Directory', { fg = c.func })
+
+    -- Tabline
+    hl(0, 'TabLine', { fg = c.dim, bg = '#1A1A1A' })
+    hl(0, 'TabLineSel', { fg = c.fg, bg = '#333333', bold = true })
+    hl(0, 'TabLineFill', { fg = c.dim, bg = c.bg })
+
+    -- Syntax
+    hl(0, 'Comment', { fg = c.comment })
+    hl(0, 'Constant', { fg = c.const })
+    hl(0, 'String', { fg = c.string })
+    hl(0, 'Character', { fg = c.string })
+    hl(0, 'Number', { fg = c.const })
+    hl(0, 'Float', { fg = c.const })
+    hl(0, 'Boolean', { fg = c.const })
+    hl(0, 'Identifier', { fg = c.variable })
+    hl(0, 'Function', { fg = c.func })
+
+    for _, group in ipairs({
+        'Statement', 'Conditional', 'Repeat', 'Exception',
+        'Keyword', 'Include', 'PreProc', 'Macro',
+    }) do
+        hl(0, group, { fg = c.keyword })
+    end
+
+    hl(0, 'Operator', { fg = c.fg })
+    hl(0, 'Delimiter', { fg = '#BFBFBF' })
+    hl(0, 'Type', { fg = c.type })
+    hl(0, 'StorageClass', { fg = c.keyword })
+    hl(0, 'Structure', { fg = c.type })
+    hl(0, 'Special', { fg = c.special })
+
+    hl(0, 'Error', { fg = c.error, bold = true })
+    hl(0, 'Todo', { fg = c.bg, bg = '#D0BC00', bold = true })
+
+    -- Diagnostics
+    hl(0, 'DiagnosticError', { fg = c.error })
+    hl(0, 'DiagnosticWarn', { fg = c.warn })
+    hl(0, 'DiagnosticInfo', { fg = c.info })
+    hl(0, 'DiagnosticHint', { fg = c.type })
+
+    hl(0, 'DiagnosticUnderlineError', {
+        undercurl = true,
+        sp = c.error,
+    })
+
+    hl(0, 'DiagnosticUnderlineWarn', {
+        undercurl = true,
+        sp = c.warn,
+    })
+
+    -- Diff
+    hl(0, 'DiffAdd', { fg = '#44BC44' })
+    hl(0, 'DiffDelete', { fg = '#FF8059' })
+    hl(0, 'DiffChange', { fg = '#2FAFFF' })
+    hl(0, 'DiffText', { fg = '#D0BC00', bold = true })
+end
+
 function ColorMyPencils(color)
     -- color = color or "alabaster"
 
@@ -2423,7 +2535,8 @@ function ColorMyPencils(color)
 
     --dark()
     --gruber()
-    reverse()
+    --reverse()
+    modus()
     remove_all_italics()
 
     vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
