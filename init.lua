@@ -1170,17 +1170,12 @@ local function post_install_setup()
                         score_offset = 10,
                         opts = {
                             trailing_slash = false,
-                            label = 'Path',
                         },
                     },
                     buffer = {
                         name = 'Buffer',
                         module = 'blink.cmp.sources.buffer',
                         score_offset = 5,
-                        opts = {
-                            min_keyword_length = 2,
-                            max_entries = 100,
-                        },
                     },
                     snippets = {
                         name = 'Snippets',
