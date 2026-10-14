@@ -1404,6 +1404,7 @@ local function post_install_setup()
             },
             filters = {
                 dotfiles = false,
+                git_ignored = false,
             },
             update_focused_file = {
                 enable = true,
