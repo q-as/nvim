@@ -1403,7 +1403,7 @@ local function post_install_setup()
                 side = 'left',
             },
             filters = {
-                dotfiles = true,
+                dotfiles = false,
             },
             update_focused_file = {
                 enable = true,
