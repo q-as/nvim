@@ -32,7 +32,6 @@ vim.opt.guicursor = "a:block"
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
-vim.opt_local.laststatus = 0
 vim.g.mapleader = " "
 vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
@@ -40,12 +39,11 @@ vim.opt_local.ruler = false
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.timeoutlen = 300
-vim.opt.updatetime = 50
+vim.opt.updatetime = 250
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 0
 vim.o.shortmess = vim.o.shortmess .. "atI"
 vim.o.cmdheight = 1
-vim.o.laststatus = 0
 vim.opt.ruler = false
 vim.o.laststatus = 1
 vim.opt.autoread = true
@@ -175,6 +173,12 @@ end
 vim.o.statusline = " %{v:lua.StatusName()} %m"
 
 local repo_cache = {}
+local branch_cache = ""
+
+local function update_branch_cache()
+    local ok, head = pcall(vim.fn.FugitiveHead)
+    branch_cache = (ok and head ~= "") and head or ""
+end
 
 local function esc(s)
     return (s:gsub("%%", "%%%%"))
@@ -256,8 +260,7 @@ function _G.NvimTabLine()
     local ft = vim.bo.filetype
     ft = ft ~= "" and (" [" .. (ft:gsub("^%l", string.upper)) .. "]") or ""
 
-    local ok, head = pcall(vim.fn.FugitiveHead)
-    local branch = (ok and head ~= "") and (" git:" .. esc(head)) or ""
+    local branch = branch_cache ~= "" and (" git:" .. esc(branch_cache)) or ""
 
     local S = vim.diagnostic.severity
     local d = vim.diagnostic.count(0)
@@ -279,12 +282,22 @@ vim.o.showtabline = 2
 vim.o.tabline = "%!v:lua.NvimTabLine()"
 
 vim.api.nvim_create_autocmd("DirChanged", {
-    callback = function() repo_cache = {} end,
+    callback = function()
+        repo_cache = {}
+        update_branch_cache()
+    end,
 })
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "FocusGained" }, {
+    callback = update_branch_cache,
+})
+
+-- Inicializa o cache uma vez depois que os plugins forem carregados.
+vim.schedule(update_branch_cache)
 
 vim.api.nvim_create_autocmd({
     "CursorMoved", "CursorMovedI", "ModeChanged",
-    "TextChanged", "TextChangedI", "BufModifiedSet", "DiagnosticChanged",
+    "BufModifiedSet", "DiagnosticChanged",
 }, {
     callback = function() vim.cmd.redrawtabline() end,
 })
@@ -1403,8 +1416,7 @@ local function post_install_setup()
                 side = 'left',
             },
             filters = {
-                dotfiles = false,
-                git_ignored = false,
+                dotfiles = true,
             },
             update_focused_file = {
                 enable = true,
@@ -1620,7 +1632,7 @@ local function post_install_setup()
         desc = 'Move to right window'
     })
 
-    vim.keymap.set('n', '<leader>t', ':belowright 12split term://zsh<CR>', {
+    vim.keymap.set('n', '<leader>t', ':belowright 12split term://bash<CR>', {
         silent = true,
         desc = 'Open terminal split',
     })
@@ -2120,8 +2132,6 @@ local function post_install_setup()
                 end,
             },
         })
-
-        refresh_cache()
     end
 
     vim.api.nvim_create_autocmd("VimEnter", {
@@ -2159,7 +2169,7 @@ local function post_install_setup()
                 enable = true,
                 disable = ts_disable,
             },
-            sync_install = true,
+            sync_install = false,
             auto_install = true,
         })
     end)
@@ -2548,6 +2558,114 @@ local function modus()
     hl(0, 'DiffText', { fg = '#D0BC00', bold = true })
 end
 
+local function font_lock_mode()
+    local hl = vim.api.nvim_set_hl
+
+    -- Usa a paleta ANSI do terminal (ctermfg só vale sem termguicolors)
+    vim.opt.termguicolors = false
+
+    local ansi = {
+        none    = 'NONE', -- SYN_NONE: cor padrão do terminal
+        comment = 6,      -- SYN_COMMENT: cyan
+        keyword = 3,      -- SYN_KEYWORD: yellow
+        type    = 2,      -- SYN_TYPE: green
+        string  = 5,      -- SYN_STRING: magenta
+        number  = 1,      -- SYN_NUMBER: red
+        preproc = 4,      -- SYN_PREPROC: blue
+        heading = 3,      -- SYN_HEADING: bold yellow
+        quote   = 6,      -- SYN_QUOTE: cyan
+    }
+
+    -- UI
+    hl(0, 'Normal', { ctermfg = 'NONE', ctermbg = 'NONE' })
+    hl(0, 'NormalFloat', { ctermfg = 'NONE', ctermbg = 'NONE' })
+    hl(0, 'FloatBorder', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'SignColumn', { ctermbg = 'NONE' })
+    hl(0, 'LineNr', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'CursorLine', { ctermbg = 'NONE', underline = false })
+    hl(0, 'CursorLineNr', { ctermfg = 'NONE', bold = true })
+    hl(0, 'NonText', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'EndOfBuffer', { ctermfg = 'NONE', ctermbg = 'NONE' })
+    hl(0, 'ColorColumn', { ctermbg = 8 })
+    hl(0, 'WinSeparator', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'Visual', { reverse = true })
+
+    hl(0, 'StatusLine', { reverse = true })
+    hl(0, 'StatusLineNC', { ctermfg = 8, ctermbg = 'NONE' })
+
+    -- Search / completion
+    hl(0, 'Search', { ctermfg = 0, ctermbg = 3 })
+    hl(0, 'IncSearch', { ctermfg = 0, ctermbg = 1 })
+    hl(0, 'MatchParen', { bold = true, underline = true })
+
+    hl(0, 'Pmenu', { ctermfg = 'NONE', ctermbg = 'NONE' })
+    hl(0, 'PmenuSel', { reverse = true, bold = true })
+    hl(0, 'PmenuSbar', { ctermbg = 8 })
+    hl(0, 'PmenuThumb', { ctermbg = 7 })
+
+    hl(0, 'Folded', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'Directory', { ctermfg = ansi.preproc })
+
+    -- Tabline
+    hl(0, 'TabLine', { ctermfg = 8, ctermbg = 'NONE' })
+    hl(0, 'TabLineSel', { bold = true, reverse = true })
+    hl(0, 'TabLineFill', { ctermfg = 8, ctermbg = 'NONE' })
+
+    -- Syntax
+    hl(0, 'Comment', { ctermfg = ansi.comment })
+
+    hl(0, 'String', { ctermfg = ansi.string })
+    hl(0, 'Character', { ctermfg = ansi.string })
+
+    hl(0, 'Constant', { ctermfg = ansi.number })
+    hl(0, 'Number', { ctermfg = ansi.number })
+    hl(0, 'Float', { ctermfg = ansi.number })
+    hl(0, 'Boolean', { ctermfg = ansi.number })
+
+    for _, group in ipairs({
+        'Statement', 'Conditional', 'Repeat', 'Exception',
+        'Keyword', 'StorageClass',
+    }) do
+        hl(0, group, { ctermfg = ansi.keyword })
+    end
+
+    for _, group in ipairs({ 'PreProc', 'Include', 'Macro' }) do
+        hl(0, group, { ctermfg = ansi.preproc })
+    end
+
+    hl(0, 'Type', { ctermfg = ansi.type })
+    hl(0, 'Structure', { ctermfg = ansi.type })
+
+    -- SYN_NONE: usa a cor padrão do terminal
+    for _, group in ipairs({
+        'Identifier', 'Function', 'Operator', 'Delimiter', 'Special',
+    }) do
+        hl(0, group, { ctermfg = ansi.none })
+    end
+
+    -- Headings e citações (Markdown etc.)
+    hl(0, 'Title', { ctermfg = ansi.heading, bold = true })
+    hl(0, '@markup.heading', { ctermfg = ansi.heading, bold = true })
+    hl(0, '@markup.quote', { ctermfg = ansi.quote })
+
+    hl(0, 'Error', { ctermfg = 1, bold = true })
+    hl(0, 'Todo', { ctermfg = 0, ctermbg = 3, bold = true })
+
+    -- Diagnostics
+    hl(0, 'DiagnosticError', { ctermfg = 1 })
+    hl(0, 'DiagnosticWarn', { ctermfg = 3 })
+    hl(0, 'DiagnosticInfo', { ctermfg = 2 })
+    hl(0, 'DiagnosticHint', { ctermfg = 6 })
+
+    hl(0, 'DiagnosticUnderlineError', { undercurl = true, ctermfg = 1 })
+    hl(0, 'DiagnosticUnderlineWarn', { undercurl = true, ctermfg = 3 })
+
+    -- Diff
+    hl(0, 'DiffAdd', { ctermfg = 2 })
+    hl(0, 'DiffDelete', { ctermfg = 1 })
+    hl(0, 'DiffChange', { ctermfg = 4 })
+    hl(0, 'DiffText', { ctermfg = 3, bold = true })
+end
 function ColorMyPencils(color)
     -- color = color or "alabaster"
 
@@ -2559,7 +2677,8 @@ function ColorMyPencils(color)
     --dark()
     --gruber()
     --reverse()
-    modus()
+    --modus()
+    font_lock_mode()
     remove_all_italics()
 
     vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
