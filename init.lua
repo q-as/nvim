@@ -1588,7 +1588,8 @@ local function post_install_setup()
                 side = 'left',
             },
             filters = {
-                dotfiles = true,
+                dotfiles = false,
+                git_ignored = false,
             },
             update_focused_file = {
                 enable = true,
