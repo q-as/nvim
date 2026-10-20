@@ -333,6 +333,180 @@ local function ts_disable(_, buf)
     return stats.size > 5 * 1024 * 1024 or (stats.size / math.max(lines, 1)) > 1000
 end
 
+local sessions = (function()
+    local M = {}
+    local dir = vim.fn.stdpath("data") .. "/sessions"
+    vim.fn.mkdir(dir, "p")
+
+    vim.opt.sessionoptions = {
+        "buffers", "curdir", "tabpages", "winsize", "winpos", "folds",
+    }
+
+    local function path(name)
+        return dir .. "/" .. name .. ".vim"
+    end
+
+    local function has_real_buffer()
+        for _, b in ipairs(vim.api.nvim_list_bufs()) do
+            if vim.bo[b].buflisted and vim.bo[b].buftype == ""
+                and vim.api.nvim_buf_get_name(b) ~= ""
+                and vim.fn.isdirectory(vim.api.nvim_buf_get_name(b)) == 0 then
+                return true
+            end
+        end
+        return false
+    end
+
+    -- remove do arquivo as linhas que citam buffers de plugin
+    local function filter_file(p)
+        local out = {}
+        for _, l in ipairs(vim.fn.readfile(p)) do
+            if not l:find("diffview://", 1, true)
+                and not l:find("NvimTree_", 1, true) then
+                out[#out + 1] = l
+            end
+        end
+        vim.fn.writefile(out, p)
+    end
+
+    -- buffer que não deve sobreviver ao restore:
+    -- vazio sem nome, netrw (diretório) ou nvim-tree
+    local function is_junk_buf(b)
+        if not vim.api.nvim_buf_is_valid(b) then return false end
+        local name = vim.api.nvim_buf_get_name(b)
+        local ft = vim.bo[b].filetype
+
+        if ft == "NvimTree" or ft == "netrw" or name:match("NvimTree_") then
+            return true
+        end
+        if name ~= "" and vim.bo[b].buftype == "" and vim.fn.isdirectory(name) == 1 then
+            return true
+        end
+        return vim.bo[b].buftype == ""
+            and name == ""
+            and not vim.bo[b].modified
+            and vim.api.nvim_buf_line_count(b) == 1
+            and vim.api.nvim_buf_get_lines(b, 0, -1, false)[1] == ""
+    end
+
+    -- remove janelas/tabs que voltaram vazias (diff, nvim-tree, netrw)
+    local function prune_empty()
+        local tabs = vim.api.nvim_list_tabpages()
+        for i = #tabs, 1, -1 do
+            local tab = tabs[i]
+            if vim.api.nvim_tabpage_is_valid(tab) then
+                local wins = vim.api.nvim_tabpage_list_wins(tab)
+                local junk = {}
+                for _, w in ipairs(wins) do
+                    if is_junk_buf(vim.api.nvim_win_get_buf(w)) then
+                        junk[#junk + 1] = w
+                    end
+                end
+
+                if #junk == #wins then
+                    -- tab inteira só com lixo: fecha a tab
+                    if #vim.api.nvim_list_tabpages() > 1 then
+                        pcall(vim.cmd, "tabclose " .. vim.api.nvim_tabpage_get_number(tab))
+                    end
+                else
+                    for _, w in ipairs(junk) do
+                        pcall(vim.api.nvim_win_close, w, true)
+                    end
+                end
+            end
+        end
+
+        -- apaga buffers lixo que ficaram escondidos
+        for _, b in ipairs(vim.api.nvim_list_bufs()) do
+            if is_junk_buf(b) and #vim.fn.win_findbuf(b) == 0 then
+                pcall(vim.api.nvim_buf_delete, b, { force = true })
+            end
+        end
+
+        vim.cmd("wincmd =")
+    end
+
+    function M.save(name)
+        if not has_real_buffer() then return end
+
+        local p = path(name)
+        vim.cmd("silent! mksession! " .. vim.fn.fnameescape(p))
+        filter_file(p)
+    end
+
+    function M.save_named()
+        vim.ui.input({ prompt = "Session name: " }, function(name)
+            if not name or vim.trim(name) == "" then return end
+            local clean = (vim.trim(name):gsub("[^%w_%-]", "_"))
+            M.save(clean)
+            vim.notify("Session saved: " .. clean)
+        end)
+    end
+
+    function M.load(name)
+        vim.cmd("silent! %bwipeout!")
+        vim.cmd("silent! source " .. vim.fn.fnameescape(path(name)))
+        vim.schedule(prune_empty)
+        vim.notify("Session loaded: " .. name)
+    end
+
+    function M.delete(name)
+        os.remove(path(name))
+        vim.notify("Session deleted: " .. name)
+    end
+
+    function M.list()
+        local files = vim.fn.glob(dir .. "/*.vim", false, true)
+        table.sort(files, function(a, b)
+            return vim.fn.getftime(a) > vim.fn.getftime(b)
+        end)
+        local names = {}
+        for _, f in ipairs(files) do
+            names[#names + 1] = vim.fn.fnamemodify(f, ":t:r")
+        end
+        return names
+    end
+
+    function M.pick()
+        local names = M.list()
+        if #names == 0 then
+            vim.notify("No sessions saved", vim.log.levels.WARN)
+            return
+        end
+
+        require("fzf-lua").fzf_exec(names, {
+            prompt = "Sessions> ",
+            fzf_opts = { ["--multi"] = true },
+            winopts = {
+                title = " Enter: load | Ctrl-x: delete (Tab: multi) ",
+                title_pos = "center",
+            },
+            actions = {
+                ["default"] = function(sel)
+                    if sel and sel[1] then
+                        vim.schedule(function() M.load(sel[1]) end)
+                    end
+                end,
+                ["ctrl-x"] = function(sel)
+                    if sel and sel[1] then
+                        for _, s in ipairs(sel) do
+                            M.delete(s)
+                        end
+                        -- reabre com a lista atualizada
+                        vim.schedule(M.pick)
+                    end
+                end,
+            },
+        })
+    end
+
+    vim.api.nvim_create_autocmd("VimLeavePre", {
+        callback = function() M.save("_last") end,
+    })
+
+    return M
+end)()
+
 local function web_search()
     local query = vim.fn.input("Search: ")
 
@@ -1559,6 +1733,12 @@ local function post_install_setup()
             { "<leader>T",       desc = "Trouble: diagnostics" },
             { "<leader>lT",      desc = "Trouble: quickfix" },
 
+            -- Sessions
+            { "<leader>p",       group = "sessions" },
+            { "<leader>ps",      desc = "Session: save" },
+            { "<leader>pl",      desc = "Session: list/load" },
+            { "<leader>pr",      desc = "Session: restore last" },
+
             -- Comment toggle
             { "<leader>m",       desc = "Toggle comment",              mode = "v" },
 
@@ -1632,7 +1812,7 @@ local function post_install_setup()
         desc = 'Move to right window'
     })
 
-    vim.keymap.set('n', '<leader>t', ':belowright 12split term://bash<CR>', {
+    vim.keymap.set('n', '<leader>t', ':belowright 12split term://zsh<CR>', {
         silent = true,
         desc = 'Open terminal split',
     })
@@ -1838,6 +2018,24 @@ local function post_install_setup()
         })
     end, {
         desc = 'FZF: Git grep',
+    })
+
+    vim.keymap.set("n", "<leader>ps", function()
+        sessions.save_named()
+    end, {
+        desc = "Session: save"
+    })
+
+    vim.keymap.set("n", "<leader>pl", function()
+        sessions.pick()
+    end, {
+        desc = "Session: list/load"
+    })
+
+    vim.keymap.set("n", "<leader>pr", function()
+        sessions.load("_last")
+    end, {
+        desc = "Session: restore last"
     })
 
     vim.keymap.set("v", "<leader>m", function()
