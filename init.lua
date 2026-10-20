@@ -349,8 +349,7 @@ local sessions = (function()
     local function has_real_buffer()
         for _, b in ipairs(vim.api.nvim_list_bufs()) do
             if vim.bo[b].buflisted and vim.bo[b].buftype == ""
-                and vim.api.nvim_buf_get_name(b) ~= ""
-                and vim.fn.isdirectory(vim.api.nvim_buf_get_name(b)) == 0 then
+                and vim.api.nvim_buf_get_name(b) ~= "" then
                 return true
             end
         end
@@ -369,18 +368,17 @@ local sessions = (function()
         vim.fn.writefile(out, p)
     end
 
-    -- buffer que não deve sobreviver ao restore:
-    -- vazio sem nome, netrw (diretório) ou nvim-tree
+    -- lixo: só nvim-tree e buffers vazios sem nome (netrw/diretórios são mantidos)
     local function is_junk_buf(b)
         if not vim.api.nvim_buf_is_valid(b) then return false end
         local name = vim.api.nvim_buf_get_name(b)
         local ft = vim.bo[b].filetype
 
-        if ft == "NvimTree" or ft == "netrw" or name:match("NvimTree_") then
+        if ft == "NvimTree" or name:match("NvimTree_") then
             return true
         end
-        if name ~= "" and vim.bo[b].buftype == "" and vim.fn.isdirectory(name) == 1 then
-            return true
+        if ft == "netrw" or (name ~= "" and vim.fn.isdirectory(name) == 1) then
+            return false
         end
         return vim.bo[b].buftype == ""
             and name == ""
@@ -389,7 +387,7 @@ local sessions = (function()
             and vim.api.nvim_buf_get_lines(b, 0, -1, false)[1] == ""
     end
 
-    -- remove janelas/tabs que voltaram vazias (diff, nvim-tree, netrw)
+    -- remove janelas/tabs que voltaram vazias (diff, nvim-tree)
     local function prune_empty()
         local tabs = vim.api.nvim_list_tabpages()
         for i = #tabs, 1, -1 do
