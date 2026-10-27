@@ -1733,13 +1733,13 @@ local function post_install_setup()
             { "<leader>lT",      desc = "Trouble: quickfix" },
 
             -- Sessions
-            { "<leader>p",       group = "sessions" },
-            { "<leader>ps",      desc = "Session: save" },
-            { "<leader>pl",      desc = "Session: list/load" },
-            { "<leader>pr",      desc = "Session: restore last" },
+            { "<leader>S",       group = "sessions" },
+            { "<leader>Ss",      desc = "Session: save" },
+            { "<leader>Sl",      desc = "Session: list/load" },
+            { "<leader>Sr",      desc = "Session: restore last" },
 
             -- Comment toggle
-            { "<leader>m",       desc = "Toggle comment",              mode = "v" },
+            { "<leader>cm",      desc = "Toggle comment",              mode = "v" },
 
             -- Change binds
             { "<leader>cb",      desc = "Change keybinds" },
@@ -1932,7 +1932,7 @@ local function post_install_setup()
         desc = 'Git: merge conflict',
     })
 
-    vim.keymap.set('n', '<C-p>', function()
+    vim.keymap.set('n', '<leader>gf', function()
         require('fzf-lua').git_files()
     end, {
         desc = 'Git files (fzf-lua)',
@@ -2019,25 +2019,25 @@ local function post_install_setup()
         desc = 'FZF: Git grep',
     })
 
-    vim.keymap.set("n", "<leader>ps", function()
+    vim.keymap.set("n", "<leader>Ss", function()
         sessions.save_named()
     end, {
         desc = "Session: save"
     })
 
-    vim.keymap.set("n", "<leader>pl", function()
+    vim.keymap.set("n", "<leader>Sl", function()
         sessions.pick()
     end, {
         desc = "Session: list/load"
     })
 
-    vim.keymap.set("n", "<leader>pr", function()
+    vim.keymap.set("n", "<leader>Sr", function()
         sessions.load("_last")
     end, {
         desc = "Session: restore last"
     })
 
-    vim.keymap.set("v", "<leader>m", function()
+    vim.keymap.set("v", "<leader>cm", function()
         local cs = vim.bo.commentstring
         local prefix = cs:match("^(.-)%s*%%s")
 
@@ -2187,11 +2187,11 @@ local function post_install_setup()
         desc = "Decrease window height",
     })
 
-    set("n", "<leader>ll", "<cmd>PackerStatus<CR>", {
+    set("n", "<leader>pl", "<cmd>PackerStatus<CR>", {
         desc = "Open Packer status",
     })
 
-    set("n", "<leader>lm", "<cmd>Mason<CR>", {
+    set("n", "<leader>m", "<cmd>Mason<CR>", {
         desc = "Open Mason LSP installer",
     })
 
@@ -2874,8 +2874,8 @@ function ColorMyPencils(color)
     --dark()
     --gruber()
     --reverse()
-    --modus()
-    font_lock_mode()
+    modus()
+    --font_lock_mode()
     remove_all_italics()
 
     vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
