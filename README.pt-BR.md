@@ -42,7 +42,7 @@ existente antes de clonar:
 
 ```sh
 cd ~/.config
-git clone https://github.com/kndrio/nvim.git
+git clone https://github.com/q-as/nvim.git
 cd nvim
 nvim init.lua
 ```
