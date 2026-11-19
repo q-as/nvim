@@ -3347,6 +3347,18 @@ local function light2()
     hl(0, '@markup.raw', { fg = '#cc0403' })
     hl(0, '@markup.list', { fg = '#0dcdcd' })
 
+    -- Bash: Variables
+    hl(0, '@variable.bash', { fg = '#cb1ed1' })
+    hl(0, '@variable.parameter.bash', { fg = '#cb1ed1' })
+    hl(0, '@variable.builtin.bash', { fg = '#cb1ed1' })
+
+    -- Bash: Special variables ($@, $*, $?, $$, $!, $# etc.)
+    hl(0, '@variable.builtin', { fg = '#cb1ed1' })
+
+    -- Bash: Boolean e Null
+    hl(0, '@boolean.bash', { fg = '#cc0403' })
+    hl(0, '@constant.builtin.bash', { fg = '#cc0403' })
+
     -- LSP: Semantic Tokens (fallback)
     hl(0, '@lsp.type.variable', { fg = '#dddddd' })
     hl(0, '@lsp.type.parameter', { fg = '#dddddd' })
