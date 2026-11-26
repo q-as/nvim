@@ -2865,290 +2865,318 @@ local function font_lock_mode()
 end
 
 local function light()
-    vim.opt.background = 'dark'
+    vim.opt.background = 'light'
     vim.cmd.colorscheme('vim')
 
     local hl = vim.api.nvim_set_hl
 
+    -- Paleta (vinda do tema nyxvamp obsidian do Helix)
+    local c = {
+        bg        = '#f0e2b3',
+        fg        = '#000000',
+        cursor    = '#80ffa0',
+        selection = '#e0e0d0',
+        line_nr   = '#404040',
+        comment   = '#606060',
+        string    = '#ff4500',
+        func      = '#0000ff',
+        green     = '#80ffa0',
+        error     = '#ff0000',
+        warn      = '#ffa500',
+        info      = '#0000ff',
+        hint      = '#00ced1',
+        add       = '#008000',
+        delete    = '#ff0000',
+        change    = '#ffa500',
+        -- extras derivados (não existem no tema original)
+        subtle    = '#d8c993', -- bg um pouco mais escuro (folds, pmenu sbar)
+        add_bg    = '#dfe6a8',
+        change_bg = '#f0dba0',
+        delete_bg = '#f2cfb0',
+    }
+
     -- Interface
-    hl(0, 'Normal', { fg = '#dddddd', bg = '#000000' })
-    hl(0, 'NormalNC', { fg = '#dddddd', bg = '#000000' })
-    hl(0, 'NormalFloat', { fg = '#dddddd', bg = '#000000' })
-    hl(0, 'FloatBorder', { fg = '#505050', bg = '#000000' })
-    hl(0, 'FloatTitle', { fg = '#0dcdcd', bg = '#000000', bold = true })
+    hl(0, 'Normal', { fg = c.fg, bg = c.bg })
+    hl(0, 'NormalNC', { fg = c.fg, bg = c.bg })
+    hl(0, 'NormalFloat', { fg = c.fg, bg = c.bg })
+    hl(0, 'FloatBorder', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'FloatTitle', { fg = c.fg, bg = c.bg, bold = true })
 
-    hl(0, 'LineNr', { fg = '#858585', bg = '#000000' })
-    hl(0, 'CursorLine', { bg = '#181818' })
-    hl(0, 'CursorLineNr', { fg = '#dddddd', bold = true })
-    hl(0, 'CursorColumn', { bg = '#181818' })
+    hl(0, 'LineNr', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'CursorLine', { bg = c.bg }) -- sem destaque de linha
+    hl(0, 'CursorLineNr', { fg = c.fg, bold = true })
+    hl(0, 'CursorColumn', { bg = c.bg })
+    hl(0, 'Cursor', { fg = c.fg, bg = c.cursor })
+    hl(0, 'lCursor', { fg = c.fg, bg = c.cursor })
+    hl(0, 'TermCursor', { fg = c.fg, bg = c.cursor })
 
-    hl(0, 'SignColumn', { fg = '#858585', bg = '#000000' })
-    hl(0, 'ColorColumn', { bg = '#181818' })
+    hl(0, 'SignColumn', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'ColorColumn', { bg = c.bg })
 
-    hl(0, 'NonText', { fg = '#505050' })
-    hl(0, 'SpecialKey', { fg = '#505050' })
-    hl(0, 'EndOfBuffer', { fg = '#000000' })
-    hl(0, 'Whitespace', { fg = '#505050' })
+    hl(0, 'NonText', { fg = c.comment })
+    hl(0, 'SpecialKey', { fg = c.comment })
+    hl(0, 'EndOfBuffer', { fg = c.bg })
+    hl(0, 'Whitespace', { fg = c.comment })
 
-    hl(0, 'Conceal', { fg = '#888888' })
-    hl(0, 'Directory', { fg = '#0dcdcd' })
-    hl(0, 'Title', { fg = '#0dcdcd', bold = true })
-    hl(0, 'Question', { fg = '#19cb00' })
-    hl(0, 'MoreMsg', { fg = '#19cb00' })
-    hl(0, 'ModeMsg', { fg = '#dddddd' })
-    hl(0, 'WarningMsg', { fg = '#af5f00' })
-    hl(0, 'ErrorMsg', { fg = '#cc0403', bold = true })
+    hl(0, 'Conceal', { fg = c.comment })
+    hl(0, 'Directory', { fg = c.func })
+    hl(0, 'Title', { fg = c.fg, bold = true })
+    hl(0, 'Question', { fg = c.add })
+    hl(0, 'MoreMsg', { fg = c.add })
+    hl(0, 'ModeMsg', { fg = c.fg })
+    hl(0, 'WarningMsg', { fg = c.warn })
+    hl(0, 'ErrorMsg', { fg = c.error, bold = true })
 
     -- Statusline
-    hl(0, 'StatusLine', { fg = '#dddddd', bg = '#303030' })
-    hl(0, 'StatusLineNC', { fg = '#888888', bg = '#181818' })
-    hl(0, 'StatusLineTerm', { fg = '#dddddd', bg = '#303030' })
-    hl(0, 'StatusLineTermNC', { fg = '#888888', bg = '#181818' })
+    hl(0, 'StatusLine', { fg = c.fg, bg = c.green })
+    hl(0, 'StatusLineNC', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'StatusLineTerm', { fg = c.fg, bg = c.green })
+    hl(0, 'StatusLineTermNC', { fg = c.line_nr, bg = c.bg })
 
-    hl(0, 'WinSeparator', { fg = '#505050', bg = '#000000' })
-    hl(0, 'VertSplit', { fg = '#505050', bg = '#000000' })
+    hl(0, 'WinSeparator', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'VertSplit', { fg = c.line_nr, bg = c.bg })
 
     -- Seleção e pesquisa
-    hl(0, 'Visual', { bg = '#303030' })
-    hl(0, 'VisualNOS', { bg = '#303030' })
-    hl(0, 'Search', { fg = '#000000', bg = '#ffff00' })
-    hl(0, 'IncSearch', { fg = '#000000', bg = '#ffaf00' })
-    hl(0, 'CurSearch', { fg = '#000000', bg = '#ffaf00' })
-    hl(0, 'MatchParen', { fg = '#0dcdcd', bold = true })
+    hl(0, 'Visual', { bg = c.selection })
+    hl(0, 'VisualNOS', { bg = c.selection })
+    hl(0, 'Search', { fg = c.fg, bg = c.green })
+    hl(0, 'IncSearch', { fg = c.fg, bg = c.warn })
+    hl(0, 'CurSearch', { fg = c.fg, bg = c.warn })
+    hl(0, 'MatchParen', { fg = c.green, bg = c.bg, bold = true })
 
     -- Autocomplete
-    hl(0, 'Pmenu', { fg = '#dddddd', bg = '#181818' })
-    hl(0, 'PmenuSel', { fg = '#ffffff', bg = '#303030', bold = true })
-    hl(0, 'PmenuSbar', { bg = '#181818' })
-    hl(0, 'PmenuThumb', { bg = '#858585' })
-    hl(0, 'PmenuKind', { fg = '#0dcdcd', bg = '#181818' })
-    hl(0, 'PmenuKindSel', { fg = '#0dcdcd', bg = '#303030' })
-    hl(0, 'PmenuExtra', { fg = '#888888', bg = '#181818' })
-    hl(0, 'PmenuExtraSel', { fg = '#888888', bg = '#303030' })
+    hl(0, 'Pmenu', { fg = c.fg, bg = c.bg })
+    hl(0, 'PmenuSel', { fg = c.bg, bg = c.green, bold = true })
+    hl(0, 'PmenuSbar', { bg = c.bg })
+    hl(0, 'PmenuThumb', { bg = c.line_nr })
+    hl(0, 'PmenuKind', { fg = c.fg, bg = c.bg })
+    hl(0, 'PmenuKindSel', { fg = c.bg, bg = c.green })
+    hl(0, 'PmenuExtra', { fg = c.comment, bg = c.bg })
+    hl(0, 'PmenuExtraSel', { fg = c.bg, bg = c.green })
 
-    hl(0, 'WildMenu', { fg = '#ffffff', bg = '#303030', bold = true })
+    hl(0, 'WildMenu', { fg = c.bg, bg = c.green, bold = true })
 
     -- Sintaxe básica
-    hl(0, 'Comment', { fg = '#875fff' })
+    hl(0, 'Comment', { fg = c.comment })
 
-    hl(0, 'Constant', { fg = '#dddddd' })
-    hl(0, 'String', { fg = '#cc0403' })
-    hl(0, 'Character', { fg = '#cc0403' })
-    hl(0, 'Number', { fg = '#dddddd' })
-    hl(0, 'Float', { fg = '#dddddd' })
-    hl(0, 'Boolean', { fg = '#19cb00' })
+    hl(0, 'Constant', { fg = c.fg, bold = true })
+    hl(0, 'String', { fg = c.string })
+    hl(0, 'Character', { fg = c.string })
+    hl(0, 'Number', { fg = c.fg, bold = true })
+    hl(0, 'Float', { fg = c.fg, bold = true })
+    hl(0, 'Boolean', { fg = c.fg, bold = true })
 
-    hl(0, 'Identifier', { fg = '#dddddd' })
-    hl(0, 'Function', { fg = '#dddddd' })
+    hl(0, 'Identifier', { fg = c.fg })
+    hl(0, 'Function', { fg = c.func, bold = true })
 
-    hl(0, 'Statement', { fg = '#af5f00' })
-    hl(0, 'Conditional', { fg = '#af5f00' })
-    hl(0, 'Repeat', { fg = '#af5f00' })
-    hl(0, 'Exception', { fg = '#af5f00' })
-    hl(0, 'Label', { fg = '#af5f00' })
+    hl(0, 'Statement', { fg = c.fg, bold = true })
+    hl(0, 'Conditional', { fg = c.fg, bold = true })
+    hl(0, 'Repeat', { fg = c.fg, bold = true })
+    hl(0, 'Exception', { fg = c.fg, bold = true })
+    hl(0, 'Label', { fg = c.fg, bold = true })
 
-    hl(0, 'Keyword', { fg = '#af5f00' })
-    hl(0, 'Operator', { fg = '#19cb00' })
-    hl(0, 'Delimiter', { fg = '#0dcdcd' })
+    hl(0, 'Keyword', { fg = c.fg, bold = true })
+    hl(0, 'Operator', { fg = c.fg })
+    hl(0, 'Delimiter', { fg = c.fg })
 
-    hl(0, 'PreProc', { fg = '#af5f00' })
-    hl(0, 'Include', { fg = '#af5f00' })
-    hl(0, 'Define', { fg = '#af5f00' })
-    hl(0, 'Macro', { fg = '#cb1ed1' })
-    hl(0, 'PreCondit', { fg = '#af5f00' })
+    hl(0, 'PreProc', { fg = c.fg, bold = true })
+    hl(0, 'Include', { fg = c.fg, bold = true })
+    hl(0, 'Define', { fg = c.fg, bold = true })
+    hl(0, 'Macro', { fg = c.fg, bold = true })
+    hl(0, 'PreCondit', { fg = c.fg, bold = true })
 
-    hl(0, 'Type', { fg = '#dddddd' })
-    hl(0, 'StorageClass', { fg = '#af5f00' })
-    hl(0, 'Structure', { fg = '#dddddd' })
-    hl(0, 'Typedef', { fg = '#dddddd' })
+    hl(0, 'Type', { fg = c.fg, bold = true })
+    hl(0, 'StorageClass', { fg = c.fg, bold = true })
+    hl(0, 'Structure', { fg = c.fg, bold = true })
+    hl(0, 'Typedef', { fg = c.fg, bold = true })
 
-    hl(0, 'Special', { fg = '#0dcdcd' })
-    hl(0, 'SpecialChar', { fg = '#cc0403' })
-    hl(0, 'Tag', { fg = '#0dcdcd' })
-    hl(0, 'Debug', { fg = '#cb1ed1' })
+    hl(0, 'Special', { fg = c.fg })
+    hl(0, 'SpecialChar', { fg = c.string })
+    hl(0, 'Tag', { fg = c.fg })
+    hl(0, 'Debug', { fg = c.fg })
 
-    hl(0, 'Underlined', { fg = '#0dcdcd', underline = true })
-    hl(0, 'Ignore', { fg = '#505050' })
-    hl(0, 'Error', { fg = '#cc0403', bold = true })
-    hl(0, 'Todo', { fg = '#19cb00', bold = true })
+    hl(0, 'Underlined', { fg = c.func, underline = true })
+    hl(0, 'Ignore', { fg = c.comment })
+    hl(0, 'Error', { fg = c.error, bold = true })
+    hl(0, 'Todo', { fg = c.fg, bold = true })
 
     -- Treesitter: Keywords
-    hl(0, '@keyword', { fg = '#af5f00' })
-    hl(0, '@keyword.conditional', { fg = '#af5f00' })
-    hl(0, '@keyword.repeat', { fg = '#af5f00' })
-    hl(0, '@keyword.return', { fg = '#af5f00' })
-    hl(0, '@keyword.exception', { fg = '#af5f00' })
-    hl(0, '@keyword.import', { fg = '#af5f00' })
-    hl(0, '@keyword.function', { fg = '#af5f00' })
-    hl(0, '@keyword.operator', { fg = '#af5f00' })
-    hl(0, '@keyword.modifier', { fg = '#af5f00' })
+    hl(0, '@keyword', { fg = c.fg, bold = true })
+    hl(0, '@keyword.conditional', { fg = c.fg, bold = true })
+    hl(0, '@keyword.repeat', { fg = c.fg, bold = true })
+    hl(0, '@keyword.return', { fg = c.fg, bold = true })
+    hl(0, '@keyword.exception', { fg = c.fg, bold = true })
+    hl(0, '@keyword.import', { fg = c.fg, bold = true })
+    hl(0, '@keyword.function', { fg = c.fg, bold = true })
+    hl(0, '@keyword.operator', { fg = c.fg, bold = true })
+    hl(0, '@keyword.modifier', { fg = c.fg, bold = true })
 
     -- Treesitter: Functions
-    hl(0, '@function', { fg = '#dddddd' })
-    hl(0, '@function.call', { fg = '#cb1ed1' })
-    hl(0, '@function.builtin', { fg = '#19cb00' })
-    hl(0, '@function.method', { fg = '#dddddd' })
-    hl(0, '@function.method.call', { fg = '#cb1ed1' })
-    hl(0, '@method', { fg = '#dddddd' })
-    hl(0, '@method.call', { fg = '#cb1ed1' })
-    hl(0, '@constructor', { fg = '#dddddd' })
+    hl(0, '@function', { fg = c.func, bold = true })
+    hl(0, '@function.call', { fg = c.func, bold = true })
+    hl(0, '@function.builtin', { fg = c.func, bold = true })
+    hl(0, '@function.method', { fg = c.func, bold = true })
+    hl(0, '@function.method.call', { fg = c.func, bold = true })
+    hl(0, '@method', { fg = c.func, bold = true })
+    hl(0, '@method.call', { fg = c.func, bold = true })
+    hl(0, '@constructor', { fg = c.fg, bold = true })
 
     -- Treesitter: Variables
-    hl(0, '@variable', { fg = '#dddddd' })
-    hl(0, '@variable.builtin', { fg = '#0dcdcd' })
-    hl(0, '@variable.parameter', { fg = '#dddddd' })
-    hl(0, '@variable.member', { fg = '#dddddd' })
-    hl(0, '@parameter', { fg = '#dddddd' })
+    hl(0, '@variable', { fg = c.fg })
+    hl(0, '@variable.builtin', { fg = c.fg, bold = true })
+    hl(0, '@variable.parameter', { fg = c.fg })
+    hl(0, '@variable.member', { fg = c.fg })
+    hl(0, '@parameter', { fg = c.fg })
 
     -- Treesitter: Properties
-    hl(0, '@property', { fg = '#19cb00' })
-    hl(0, '@field', { fg = '#19cb00' })
+    hl(0, '@property', { fg = c.fg })
+    hl(0, '@field', { fg = c.fg })
 
     -- Treesitter: Constants
-    hl(0, '@constant', { fg = '#dddddd' })
-    hl(0, '@constant.builtin', { fg = '#dddddd' })
-    hl(0, '@constant.macro', { fg = '#cb1ed1' })
-    hl(0, '@boolean', { fg = '#19cb00' })
-    hl(0, '@number', { fg = '#dddddd' })
-    hl(0, '@number.float', { fg = '#dddddd' })
+    hl(0, '@constant', { fg = c.fg, bold = true })
+    hl(0, '@constant.builtin', { fg = c.fg, bold = true })
+    hl(0, '@constant.macro', { fg = c.fg, bold = true })
+    hl(0, '@boolean', { fg = c.fg, bold = true })
+    hl(0, '@number', { fg = c.fg, bold = true })
+    hl(0, '@number.float', { fg = c.fg, bold = true })
 
     -- Treesitter: Strings
-    hl(0, '@string', { fg = '#cc0403' })
-    hl(0, '@string.escape', { fg = '#cc0403' })
-    hl(0, '@string.special', { fg = '#cc0403' })
-    hl(0, '@character', { fg = '#cc0403' })
-    hl(0, '@character.special', { fg = '#cc0403' })
+    hl(0, '@string', { fg = c.string })
+    hl(0, '@string.escape', { fg = c.string })
+    hl(0, '@string.special', { fg = c.string })
+    hl(0, '@character', { fg = c.string })
+    hl(0, '@character.special', { fg = c.string })
 
     -- Treesitter: Types
-    hl(0, '@type', { fg = '#dddddd' })
-    hl(0, '@type.builtin', { fg = '#19cb00' })
-    hl(0, '@type.definition', { fg = '#dddddd' })
-    hl(0, '@type.qualifier', { fg = '#af5f00' })
-    hl(0, '@namespace', { fg = '#dddddd' })
-    hl(0, '@module', { fg = '#dddddd' })
+    hl(0, '@type', { fg = c.fg, bold = true })
+    hl(0, '@type.builtin', { fg = c.fg, bold = true })
+    hl(0, '@type.definition', { fg = c.fg, bold = true })
+    hl(0, '@type.qualifier', { fg = c.fg, bold = true })
+    hl(0, '@namespace', { fg = c.fg, bold = true })
+    hl(0, '@module', { fg = c.fg, bold = true })
 
     -- Treesitter: Operators e delimitadores
-    hl(0, '@operator', { fg = '#19cb00' })
-    hl(0, '@punctuation', { fg = '#0dcdcd' })
-    hl(0, '@punctuation.bracket', { fg = '#0dcdcd' })
-    hl(0, '@punctuation.delimiter', { fg = '#0dcdcd' })
-    hl(0, '@punctuation.special', { fg = '#0dcdcd' })
+    hl(0, '@operator', { fg = c.fg })
+    hl(0, '@punctuation', { fg = c.fg })
+    hl(0, '@punctuation.bracket', { fg = c.fg })
+    hl(0, '@punctuation.delimiter', { fg = c.fg })
+    hl(0, '@punctuation.special', { fg = c.fg })
 
     -- Treesitter: Tags
-    hl(0, '@tag', { fg = '#0dcdcd' })
-    hl(0, '@tag.attribute', { fg = '#dddddd' })
-    hl(0, '@tag.delimiter', { fg = '#0dcdcd' })
+    hl(0, '@tag', { fg = c.fg })
+    hl(0, '@tag.attribute', { fg = c.fg })
+    hl(0, '@tag.delimiter', { fg = c.fg })
 
     -- Treesitter: Comentários
-    hl(0, '@comment', { fg = '#875fff' })
-    hl(0, '@comment.todo', { fg = '#19cb00', bold = true })
-    hl(0, '@comment.warning', { fg = '#af5f00', bold = true })
-    hl(0, '@comment.error', { fg = '#cc0403', bold = true })
+    hl(0, '@comment', { fg = c.comment })
+    hl(0, '@comment.todo', { fg = c.fg, bold = true })
+    hl(0, '@comment.warning', { fg = c.warn, bold = true })
+    hl(0, '@comment.error', { fg = c.error, bold = true })
 
     -- Treesitter: Outros
-    hl(0, '@attribute', { fg = '#0dcdcd' })
-    hl(0, '@label', { fg = '#af5f00' })
-    hl(0, '@markup.heading', { fg = '#0dcdcd', bold = true })
-    hl(0, '@markup.strong', { fg = '#dddddd', bold = true })
-    hl(0, '@markup.italic', { fg = '#dddddd', italic = true })
-    hl(0, '@markup.link', { fg = '#0dcdcd', underline = true })
-    hl(0, '@markup.raw', { fg = '#cc0403' })
-    hl(0, '@markup.list', { fg = '#0dcdcd' })
+    hl(0, '@attribute', { fg = c.fg, bold = true })
+    hl(0, '@label', { fg = c.fg, bold = true })
+    hl(0, '@markup.heading', { fg = c.fg, bold = true })
+    hl(0, '@markup.strong', { fg = c.fg, bold = true })
+    hl(0, '@markup.italic', { fg = c.fg, italic = true })
+    hl(0, '@markup.link', { fg = c.fg, underline = true })
+    hl(0, '@markup.link.url', { fg = c.fg, underline = true })
+    hl(0, '@markup.link.label', { fg = c.fg })
+    hl(0, '@markup.quote', { fg = c.comment, italic = true })
+    hl(0, '@markup.raw', { fg = c.string })
+    hl(0, '@markup.list', { fg = c.fg })
 
     -- LSP: Diagnósticos
-    hl(0, 'DiagnosticError', { fg = '#cc0403' })
-    hl(0, 'DiagnosticWarn', { fg = '#af5f00' })
-    hl(0, 'DiagnosticInfo', { fg = '#0dcdcd' })
-    hl(0, 'DiagnosticHint', { fg = '#19cb00' })
-    hl(0, 'DiagnosticOk', { fg = '#19cb00' })
+    hl(0, 'DiagnosticError', { fg = c.error })
+    hl(0, 'DiagnosticWarn', { fg = c.warn })
+    hl(0, 'DiagnosticInfo', { fg = c.info })
+    hl(0, 'DiagnosticHint', { fg = c.hint })
+    hl(0, 'DiagnosticOk', { fg = c.add })
 
-    hl(0, 'DiagnosticSignError', { fg = '#cc0403' })
-    hl(0, 'DiagnosticSignWarn', { fg = '#af5f00' })
-    hl(0, 'DiagnosticSignInfo', { fg = '#0dcdcd' })
-    hl(0, 'DiagnosticSignHint', { fg = '#19cb00' })
+    hl(0, 'DiagnosticSignError', { fg = c.error })
+    hl(0, 'DiagnosticSignWarn', { fg = c.warn })
+    hl(0, 'DiagnosticSignInfo', { fg = c.info })
+    hl(0, 'DiagnosticSignHint', { fg = c.hint })
 
-    hl(0, 'DiagnosticVirtualTextError', { fg = '#cc0403' })
-    hl(0, 'DiagnosticVirtualTextWarn', { fg = '#af5f00' })
-    hl(0, 'DiagnosticVirtualTextInfo', { fg = '#0dcdcd' })
-    hl(0, 'DiagnosticVirtualTextHint', { fg = '#19cb00' })
+    hl(0, 'DiagnosticVirtualTextError', { fg = c.error })
+    hl(0, 'DiagnosticVirtualTextWarn', { fg = c.warn })
+    hl(0, 'DiagnosticVirtualTextInfo', { fg = c.info })
+    hl(0, 'DiagnosticVirtualTextHint', { fg = c.hint })
 
-    hl(0, 'DiagnosticUnderlineError', { undercurl = true, sp = '#cc0403' })
-    hl(0, 'DiagnosticUnderlineWarn', { undercurl = true, sp = '#af5f00' })
-    hl(0, 'DiagnosticUnderlineInfo', { undercurl = true, sp = '#0dcdcd' })
-    hl(0, 'DiagnosticUnderlineHint', { undercurl = true, sp = '#19cb00' })
+    hl(0, 'DiagnosticUnderlineError', { undercurl = true, sp = c.error })
+    hl(0, 'DiagnosticUnderlineWarn', { undercurl = true, sp = c.warn })
+    hl(0, 'DiagnosticUnderlineInfo', { undercurl = true, sp = c.info })
+    hl(0, 'DiagnosticUnderlineHint', { undercurl = true, sp = c.hint })
 
-    hl(0, 'DiagnosticFloatingError', { fg = '#cc0403' })
-    hl(0, 'DiagnosticFloatingWarn', { fg = '#af5f00' })
-    hl(0, 'DiagnosticFloatingInfo', { fg = '#0dcdcd' })
-    hl(0, 'DiagnosticFloatingHint', { fg = '#19cb00' })
+    hl(0, 'DiagnosticFloatingError', { fg = c.error })
+    hl(0, 'DiagnosticFloatingWarn', { fg = c.warn })
+    hl(0, 'DiagnosticFloatingInfo', { fg = c.info })
+    hl(0, 'DiagnosticFloatingHint', { fg = c.hint })
 
     -- LSP: Referências
-    hl(0, 'LspReferenceText', { bg = '#303030' })
-    hl(0, 'LspReferenceRead', { bg = '#303030' })
-    hl(0, 'LspReferenceWrite', { bg = '#303030', underline = true })
+    hl(0, 'LspReferenceText', { bg = c.selection })
+    hl(0, 'LspReferenceRead', { bg = c.selection })
+    hl(0, 'LspReferenceWrite', { bg = c.selection, underline = true })
 
     -- LSP: Semantic Tokens
-    hl(0, '@lsp.type.variable', { fg = '#dddddd' })
-    hl(0, '@lsp.type.parameter', { fg = '#dddddd' })
-    hl(0, '@lsp.type.function', { fg = '#cb1ed1' })
-    hl(0, '@lsp.type.method', { fg = '#cb1ed1' })
-    hl(0, '@lsp.type.keyword', { fg = '#af5f00' })
-    hl(0, '@lsp.type.class', { fg = '#dddddd' })
-    hl(0, '@lsp.type.enum', { fg = '#dddddd' })
-    hl(0, '@lsp.type.interface', { fg = '#dddddd' })
-    hl(0, '@lsp.type.property', { fg = '#19cb00' })
-    hl(0, '@lsp.type.namespace', { fg = '#dddddd' })
-    hl(0, '@lsp.type.type', { fg = '#dddddd' })
+    hl(0, '@lsp.type.variable', { fg = c.fg })
+    hl(0, '@lsp.type.parameter', { fg = c.fg })
+    hl(0, '@lsp.type.function', { fg = c.func, bold = true })
+    hl(0, '@lsp.type.method', { fg = c.func, bold = true })
+    hl(0, '@lsp.type.keyword', { fg = c.fg, bold = true })
+    hl(0, '@lsp.type.class', { fg = c.fg, bold = true })
+    hl(0, '@lsp.type.enum', { fg = c.fg, bold = true })
+    hl(0, '@lsp.type.interface', { fg = c.fg, bold = true })
+    hl(0, '@lsp.type.property', { fg = c.fg })
+    hl(0, '@lsp.type.namespace', { fg = c.fg, bold = true })
+    hl(0, '@lsp.type.type', { fg = c.fg, bold = true })
 
     -- LSP: Semantic Modifiers
-    hl(0, '@lsp.mod.readonly', { fg = '#dddddd' })
-    hl(0, '@lsp.mod.static', { fg = '#dddddd' })
-    hl(0, '@lsp.mod.defaultLibrary', { fg = '#19cb00' })
+    hl(0, '@lsp.mod.readonly', { fg = c.fg })
+    hl(0, '@lsp.mod.static', { fg = c.fg })
+    hl(0, '@lsp.mod.defaultLibrary', { fg = c.func })
 
     -- LSP: Semantic Typemod
-    hl(0, '@lsp.typemod.function.defaultLibrary', { fg = '#19cb00' })
-    hl(0, '@lsp.typemod.method.defaultLibrary', { fg = '#19cb00' })
+    hl(0, '@lsp.typemod.function.defaultLibrary', { fg = c.func, bold = true })
+    hl(0, '@lsp.typemod.method.defaultLibrary', { fg = c.func, bold = true })
 
     -- Diff
-    hl(0, 'DiffAdd', { fg = '#19cb00', bg = '#101a10' })
-    hl(0, 'DiffChange', { fg = '#0dcdcd', bg = '#101818' })
-    hl(0, 'DiffDelete', { fg = '#cc0403', bg = '#1a1010' })
-    hl(0, 'DiffText', { fg = '#ffffff', bg = '#303030', bold = true })
+    hl(0, 'DiffAdd', { fg = c.add, bg = c.add_bg })
+    hl(0, 'DiffChange', { fg = c.fg, bg = c.change_bg })
+    hl(0, 'DiffDelete', { fg = c.delete, bg = c.delete_bg })
+    hl(0, 'DiffText', { fg = c.fg, bg = c.selection, bold = true })
 
     -- Git signs
-    hl(0, 'GitSignsAdd', { fg = '#19cb00' })
-    hl(0, 'GitSignsChange', { fg = '#0dcdcd' })
-    hl(0, 'GitSignsDelete', { fg = '#cc0403' })
+    hl(0, 'GitSignsAdd', { fg = c.add })
+    hl(0, 'GitSignsChange', { fg = c.change })
+    hl(0, 'GitSignsDelete', { fg = c.delete })
 
     -- Folds
-    hl(0, 'Folded', { fg = '#888888', bg = '#181818' })
-    hl(0, 'FoldColumn', { fg = '#858585', bg = '#000000' })
+    hl(0, 'Folded', { fg = c.comment, bg = c.subtle })
+    hl(0, 'FoldColumn', { fg = c.line_nr, bg = c.bg })
 
     -- Spell checking
-    hl(0, 'SpellBad', { undercurl = true, sp = '#cc0403' })
-    hl(0, 'SpellCap', { undercurl = true, sp = '#0dcdcd' })
-    hl(0, 'SpellRare', { undercurl = true, sp = '#cb1ed1' })
-    hl(0, 'SpellLocal', { undercurl = true, sp = '#19cb00' })
+    hl(0, 'SpellBad', { undercurl = true, sp = c.error })
+    hl(0, 'SpellCap', { undercurl = true, sp = c.info })
+    hl(0, 'SpellRare', { undercurl = true, sp = c.hint })
+    hl(0, 'SpellLocal', { undercurl = true, sp = c.add })
 
     -- Matching
-    hl(0, 'QuickFixLine', { fg = '#ffffff', bg = '#303030' })
-    hl(0, 'Substitute', { fg = '#000000', bg = '#ffff00' })
+    hl(0, 'QuickFixLine', { fg = c.fg, bg = c.selection })
+    hl(0, 'Substitute', { fg = c.fg, bg = c.green })
 
     -- Tabline
-    hl(0, 'TabLine', { fg = '#888888', bg = '#181818' })
-    hl(0, 'TabLineSel', { fg = '#ffffff', bg = '#303030', bold = true })
-    hl(0, 'TabLineFill', { bg = '#181818' })
-
-    -- Terminal
-    hl(0, 'TermCursor', { reverse = true })
+    hl(0, 'TabLine', { fg = c.line_nr, bg = c.bg })
+    hl(0, 'TabLineSel', { fg = c.fg, bg = c.green, bold = true })
+    hl(0, 'TabLineFill', { bg = c.bg })
 
     -- Messages
-    hl(0, 'MsgArea', { fg = '#dddddd' })
-    hl(0, 'MsgSeparator', { fg = '#505050' })
+    hl(0, 'MsgArea', { fg = c.fg })
+    hl(0, 'MsgSeparator', { fg = c.line_nr })
 
     -- Additional UI
-    hl(0, 'Scrollbar', { bg = '#181818' })
-    hl(0, 'ScrollbarHandle', { bg = '#505050' })
+    hl(0, 'Scrollbar', { bg = c.bg })
+    hl(0, 'ScrollbarHandle', { bg = c.line_nr })
 end
 
 local function light2()
@@ -3464,11 +3492,11 @@ function ColorMyPencils(color)
     end
 
     --dark()
-    --gruber()
+    gruber()
     --reverse()
     --modus()
     --light()
-    light2()
+    --light2()
     --font_lock_mode()
     remove_all_italics()
 
